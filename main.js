@@ -1279,7 +1279,6 @@ electronApp.on('window-all-closed', () => {
     }
 });
 electronApp.on('will-quit', () => {
-    stopCloudflare();
 });
 
 
@@ -6837,48 +6836,6 @@ function fixLanguageJunctions(text) {
     return fixedText.replace(/\s+/g, ' ').trim();
 }
 
-ipcMain.on('run-start-script', (event) => {
-    console.log("Starting Cloudflare tunnel...");
-    const scriptPath = path.join(resourcesPath, 'start-cloudflare-server.bat');
-    exec(`"${scriptPath}"`, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error starting Cloudflare: ${error}`);
-            event.reply('server-status', { status: 'error', message: error.message });
-            return;
-        }
-        console.log(`Cloudflare started: ${stdout}`);
-        event.reply('server-status', { status: 'running', message: 'Cloudflare tunnel started successfully' });
-    });
-});
-
-ipcMain.on('run-stop-script', (event) => {
-    console.log("Stopping Cloudflare tunnel...");
-    const scriptPath = path.join(resourcesPath, 'stop-cloudflare-server.bat');
-    exec(`"${scriptPath}"`, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error stopping Cloudflare: ${error}`);
-            event.reply('server-status', { status: 'error', message: error.message });
-            return;
-        }
-        console.log(`Cloudflare stopped: ${stdout}`);
-        event.reply('server-status', { status: 'stopped', message: 'Cloudflare tunnel stopped successfully' });
-    });
-});
-
-// في ملف main.js
-ipcMain.on('stop-server', () => {
-    const { exec } = require('child_process');
-
-    // إغلاق نفق كلاود فلير
-
-
-    stopCloudflare();
-
-
-    // إغلاق سيرفر النود (تأكد من تحديد العملية الصحيحة لكي لا يغلق الـ Electron نفسه)
-    // إذا كان السيرفر يعمل على منفذ 5000 يمكنك استهدافه هكذا:
-    // exec('for /f "tokens=5" %a in (\'netstat -aon ^| findstr :5000\') do taskkill /f /pid %a');
-});
 
 function ensureAdmin() {
     // أمر fltmc هو الأدق لفحص صلاحيات المسؤول في ويندوز
@@ -6889,7 +6846,7 @@ function ensureAdmin() {
             const choice = dialog.showMessageBoxSync({
                 type: 'warning',
                 title: 'صلاحيات المسؤول مطلوبة',
-                message: 'يحتاج البرنامج لصلاحيات المسؤول لتشغيل السيرفر ونفق Cloudflare بشكل صحيح.',
+                message: 'يحتاج البرنامج لصلاحيات المسؤول لتشغيل السيرفر بشكل صحيح.',
                 buttons: ['تشغيل كمسؤول', 'إغلاق'],
                 defaultId: 0,
                 cancelId: 1
@@ -6911,25 +6868,6 @@ function ensureAdmin() {
         }
     });
 }
-
-// استدعاء الدالة
-const stopCloudflare = () => {
-    console.log("برجاء الانتظار، جاري تنظيف عمليات Cloudflare...");
-
-    // 1. محاولة إيقاف الخدمة إذا كانت موجودة (لضمان عدم العودة)
-    exec('sc stop cloudflared', () => {
-
-        // 2. قتل العملية وشجرتها بالكامل بقوة
-        // /f للقوة، /t لقتل العمليات التابعة
-        exec('taskkill /f /t /im cloudflared.exe', (err) => {
-            if (err) {
-                console.log("لم يتم العثور على عمليات نشطة.");
-            } else {
-                console.log("تم إغلاق النفق بنجاح.");
-            }
-        });
-    });
-};
 
 
 

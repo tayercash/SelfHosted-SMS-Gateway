@@ -12,10 +12,7 @@ function getHwid() {
 const api = {
     sendNotification: (title, body) => ipcRenderer.send('show-notification', { title, body }),
     isElectron: true,
-    getMachineId: getHwid,
-    startCloudflare: () => ipcRenderer.send('run-start-script'),
-    stopCloudflare: () => ipcRenderer.send('run-stop-script'),
-    onServerStatus: (callback) => ipcRenderer.on('server-status', (event, data) => callback(data))
+    getMachineId: getHwid
 };
 
 contextBridge.exposeInMainWorld('electron', api);
