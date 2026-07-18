@@ -1,0 +1,855 @@
+<style>
+    .noip-wrap {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 16px;
+    }
+
+    .noip-header {
+        background: var(--sidebar-bg);
+        border: 1px solid var(--mou_border_color);
+        border-radius: 20px;
+        padding: 16px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        box-shadow: var(--shadow-md);
+    }
+
+    .noip-header h2 {
+        color: var(--primary-color);
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .noip-card {
+        background: var(--sidebar-bg);
+        border: 1px solid var(--mou_border_color);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 20px;
+    }
+
+    .noip-card h3 {
+        color: var(--primary-color);
+        font-size: 1rem;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .noip-card .form-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+
+    .noip-card .form-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .noip-card label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.8rem;
+        color: var(--text-dim);
+        font-weight: 500;
+    }
+
+    .noip-card input {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1.5px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        color: #fff;
+        font-family: inherit;
+        font-size: 0.9rem;
+        transition: border-color 0.3s;
+        box-sizing: border-box;
+    }
+
+    .noip-card input:focus {
+        outline: none;
+        border-color: rgba(255, 204, 0, 0.5);
+    }
+
+    .btn-save {
+        padding: 10px 24px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-family: inherit;
+        background: linear-gradient(135deg, #ffcc00, #ff9900);
+        color: #0b0a02;
+        white-space: nowrap;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(255, 204, 0, 0.3);
+    }
+
+    .btn-blue {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: #fff;
+    }
+
+    .btn-blue:hover {
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-red {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: #fff;
+    }
+
+    .btn-red:hover {
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    }
+
+    .toggle-wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .toggle {
+        position: relative;
+        width: 48px;
+        height: 26px;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .toggle input {
+        display: none;
+    }
+
+    .toggle .slider {
+        position: absolute;
+        inset: 0;
+        background: #555;
+        border-radius: 26px;
+        transition: 0.3s;
+    }
+
+    .toggle .slider:before {
+        content: '';
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        left: 3px;
+        bottom: 3px;
+        background: #fff;
+        border-radius: 50%;
+        transition: 0.3s;
+    }
+
+    .toggle input:checked+.slider {
+        background: #2ec76e;
+    }
+
+    .toggle input:checked+.slider:before {
+        transform: translateX(22px);
+    }
+
+    .toggle-label {
+        font-size: 0.9rem;
+        color: var(--text-main);
+        font-weight: 600;
+    }
+
+    .ip-box {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1.5px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .ip-box .ip-label {
+        font-size: 0.85rem;
+        color: var(--text-dim);
+    }
+
+    .ip-box .ip-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        font-family: 'Courier New', monospace;
+        direction: ltr;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .status-badge.success {
+        background: rgba(46, 199, 110, 0.12);
+        color: #2ec76e;
+        border: 1px solid rgba(46, 199, 110, 0.3);
+    }
+
+    .status-badge.error {
+        background: rgba(239, 68, 68, 0.12);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .status-badge.pending {
+        background: rgba(255, 204, 0, 0.12);
+        color: #ffcc00;
+        border: 1px solid rgba(255, 204, 0, 0.3);
+    }
+
+    .instructions-box {
+        background: rgba(255, 204, 0, 0.04);
+        border: 1px solid rgba(255, 204, 0, 0.12);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+    }
+
+    .instructions-box h4 {
+        color: var(--primary-color);
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .instructions-box p,
+    .instructions-box li {
+        font-size: 0.85rem;
+        color: var(--text-dim);
+        line-height: 1.6;
+    }
+
+    .instructions-box ul {
+        padding-inline-start: 20px;
+    }
+
+    .instructions-box code {
+        background: rgba(255, 255, 255, 0.06);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        color: #ffcc00;
+    }
+
+    .update-result {
+        margin-top: 12px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        display: none;
+        line-height: 1.6;
+        direction: ltr;
+    }
+
+    .update-result.show {
+        display: block;
+    }
+
+    .update-result.success {
+        background: rgba(46, 199, 110, 0.08);
+        border: 1px solid rgba(46, 199, 110, 0.2);
+        color: #2ec76e;
+    }
+
+    .update-result.error {
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+    }
+
+    .btn-group {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .diag-card {
+        background: var(--sidebar-bg);
+        border: 1px solid var(--mou_border_color);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 20px;
+    }
+
+    .diag-card h3 {
+        color: var(--primary-color);
+        font-size: 1rem;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .diag-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.03);
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .diag-row .diag-label {
+        font-size: 0.85rem;
+        color: var(--text-dim);
+    }
+
+    .diag-row .diag-value {
+        font-size: 0.95rem;
+        font-weight: 700;
+        font-family: 'Courier New', monospace;
+        direction: ltr;
+    }
+
+    .diag-row .diag-value.match {
+        color: #2ec76e;
+    }
+
+    .diag-row .diag-value.mismatch {
+        color: #ef4444;
+    }
+
+    .diag-row .diag-value.pending {
+        color: #ffcc00;
+    }
+
+    #noip-toast {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 12px 28px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: none;
+        z-index: 9999999;
+        background: #2ec76e;
+        color: #fff;
+        box-shadow: var(--shadow-toast);
+        animation: slideUp 0.3s ease;
+    }
+
+    #noip-toast.error {
+        background: #ef4444;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateX(-50%) translateY(20px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .noip-header {
+            flex-direction: column;
+            gap: 8px;
+            text-align: center;
+        }
+
+        .noip-card .form-row {
+            flex-direction: column;
+        }
+
+        .ip-box {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+</style>
+
+<div class="noip-wrap">
+    <div class="noip-header">
+        <h2><i class="fas fa-globe"></i> <span data-i18n="noip.title">No-IP Settings (DDNS)</span></h2>
+    </div>
+
+    <div class="instructions-box">
+        <h4><i class="fas fa-info-circle"></i> <span data-i18n="noip.how_it_works">How it works</span></h4>
+        <p data-i18n-html="noip.how_it_works_desc">No-IP service binds a fixed hostname to a dynamic public IP address. This allows server access via a fixed link like <code>mygateway.ddns.net</code> even if the IP changes.</p>
+        <ul>
+            <li data-i18n-html="noip.hw_step1">Create a free account on <a href="https://www.noip.com" target="_blank" style="color:#ffcc00;">noip.com</a></li>
+            <li data-i18n-html="noip.hw_step2">Create a <strong>Hostname</strong> from the No-IP control panel</li>
+            <li data-i18n-html="noip.hw_step3">Enter your account details here and press <strong>Save</strong></li>
+            <li data-i18n-html="noip.hw_step4">Press <strong>Update Now</strong> to sync DNS with the server's current IP</li>
+        </ul>
+    </div>
+
+    <div class="noip-card">
+        <h3><i class="fas fa-server"></i> <span data-i18n="noip.server_ip_heading">Server IP</span></h3>
+        <div class="ip-box">
+            <div>
+                <div class="ip-label" data-i18n="noip.current_address">Current Address:</div>
+                <div class="ip-value" id="noip-public-ip" data-i18n="noip.loading">Loading...</div>
+            </div>
+            <span class="status-badge pending" id="noip-ip-status">
+                <i class="fas fa-sync-alt fa-spin"></i> <span data-i18n="noip.loading">Loading...</span>
+            </span>
+        </div>
+        <button class="btn-save btn-blue" onclick="noip_refreshIp()" style="font-size:0.85rem;">
+            <i class="fas fa-sync-alt"></i> <span data-i18n="noip.change_ip">Change IP</span>
+        </button>
+    </div>
+
+    <div class="diag-card">
+        <h3><i class="fas fa-stethoscope"></i> <span data-i18n="noip.diagnostics_heading">Connection Diagnostics</span></h3>
+        <div class="diag-row">
+            <span class="diag-label" data-i18n="noip.server_ip">Server IP (current):</span>
+            <span class="diag-value pending" id="diag-public-ip">---</span>
+        </div>
+        <div class="diag-row">
+            <span class="diag-label" data-i18n="noip.host_ip">Host IP (No-IP current):</span>
+            <span class="diag-value pending" id="diag-dns-ip">---</span>
+        </div>
+        <div class="diag-row">
+            <span class="diag-label" data-i18n="noip.status">Status:</span>
+            <span class="diag-value pending" id="diag-status" data-i18n="noip.checking">Checking...</span>
+        </div>
+        <button class="btn-save btn-blue" onclick="noip_diagnose()" style="font-size:0.85rem;margin-top:10px;">
+            <i class="fas fa-stethoscope"></i> <span data-i18n="noip.check_network">Check Network</span>
+        </button>
+        <div id="diag-warning"
+            style="display:none;margin-top:12px;padding:12px 16px;border-radius:10px;font-size:0.85rem;line-height:1.7;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#ef4444;">
+        </div>
+    </div>
+
+    <div class="noip-card">
+        <h3><i class="fas fa-key"></i> <span data-i18n="noip.noip_account_heading">No-IP Account Setup</span></h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Hostname</label>
+                <input type="text" id="noip-hostname" placeholder="mygateway.ddns.net" dir="ltr">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label data-i18n="noip.username_label">Username (from No-IP account)</label>
+                <input type="text" id="noip-username" placeholder="user@email.com" dir="ltr">
+            </div>
+            <div class="form-group">
+                <label data-i18n="noip.password_label">Password</label>
+                <input type="password" id="noip-password" placeholder="••••••••" dir="ltr">
+            </div>
+        </div>
+        <div class="toggle-wrap">
+            <label class="toggle">
+                <input type="checkbox" id="noip-enabled">
+                <span class="slider"></span>
+            </label>
+            <span class="toggle-label" id="noip-enabled-label" data-i18n="noip.auto_ddns">Auto DDNS Update (Off)</span>
+        </div>
+        <div class="btn-group">
+            <button class="btn-save" onclick="noip_saveSettings()"><i class="fas fa-save"></i> <span data-i18n="noip.save_settings">Save Settings</span></button>
+            <button class="btn-save btn-blue" onclick="noip_updateNow()"><i class="fas fa-cloud-upload-alt"></i> <span data-i18n="noip.update_network">Update Network</span></button>
+        </div>
+        <div id="noip-update-result" class="update-result"></div>
+    </div>
+
+    <div class="noip-card">
+        <h3><i class="fas fa-lock"></i> <span data-i18n="noip.ssl_heading">SSL Certificate (Let's Encrypt)</span></h3>
+        <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:16px;" data-i18n="noip.ssl_info">Free SSL certificate for HTTPS</p>
+
+        <div class="instructions-box" style="margin-bottom:16px;">
+            <h4><i class="fas fa-info-circle"></i> <span data-i18n="noip.ssl_requirements">Requirements</span></h4>
+            <ul>
+                <li data-i18n="noip.ssl_req1">Domain pointing to your server</li>
+                <li data-i18n-html="noip.ssl_req2">Port 80 open</li>
+                <li data-i18n="noip.ssl_req3">Valid No-IP or custom domain</li>
+            </ul>
+        </div>
+
+        <div class="ip-box" style="margin-bottom:12px;">
+            <div>
+                <div class="ip-label" data-i18n="noip.cert_status">Certificate Status:</div>
+                <div class="ip-value" id="ssl-cert-status" style="font-size:0.95rem;" data-i18n="noip.loading">Loading...</div>
+            </div>
+            <span class="status-badge pending" id="ssl-cert-badge">
+                <i class="fas fa-sync-alt fa-spin"></i> <span data-i18n="noip.loading">Loading...</span>
+            </span>
+        </div>
+        <div class="ip-box" style="margin-bottom:16px;">
+            <div>
+                <div class="ip-label" data-i18n="noip.cert_expiry">Expiry Date:</div>
+                <div class="ip-value" id="ssl-cert-expires" style="font-size:0.9rem;">---</div>
+            </div>
+        </div>
+
+        <div id="ssl-cert-domains" style="margin-bottom:16px;"></div>
+
+        <div class="btn-group">
+            <button class="btn-save" onclick="ssl_createAccount()" id="ssl-account-btn"
+                style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;">
+                <i class="fas fa-user-plus"></i> <span data-i18n="noip.create_account">Create Let's Encrypt Account</span>
+            </button>
+            <button class="btn-save btn-blue" onclick="ssl_requestCert()" id="ssl-request-btn">
+                <i class="fas fa-certificate"></i> <span data-i18n="noip.request_cert">Request Certificate</span>
+            </button>
+            <button class="btn-save" onclick="ssl_renewCert()" id="ssl-renew-btn"
+                style="display:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;align-items: center;gap: 4px;">
+                <i class="fas fa-sync-alt"></i> <span data-i18n="noip.renew_cert">Renew Certificate</span>
+            </button>
+        </div>
+        <div id="ssl-result" class="update-result"></div>
+    </div>
+</div>
+
+<div id="noip-toast"></div>
+
+<script src="/assets/js/i18n.js"></script>
+<script>
+    function noip_showToast(msg, isError) {
+        var el = document.getElementById('noip-toast');
+        el.textContent = msg;
+        el.className = isError ? 'error' : '';
+        el.style.display = 'block';
+        setTimeout(function () { el.style.display = 'none'; }, 3000);
+    }
+
+    function noip_refreshIp() {
+        var ipEl = document.getElementById('noip-public-ip');
+        var statusEl = document.getElementById('noip-ip-status');
+        ipEl.textContent = t('noip.loading');
+        statusEl.className = 'status-badge pending';
+        statusEl.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> ' + t('noip.loading');
+
+        $.get('/api/public-ip?' + Date.now(), function (data) {
+            ipEl.textContent = data.ip;
+            statusEl.className = 'status-badge success';
+            statusEl.innerHTML = '<i class="fas fa-check-circle"></i> ' + t('noip.connected');
+        }).fail(function () {
+            ipEl.textContent = t('noip.not_available');
+            statusEl.className = 'status-badge error';
+            statusEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + t('noip.status_error');
+        });
+    }
+
+    function noip_loadSettings() {
+        $.get('/api/noip/settings', function (settings) {
+            document.getElementById('noip-hostname').value = settings.hostname || '';
+            document.getElementById('noip-username').value = settings.username || '';
+            document.getElementById('noip-enabled').checked = settings.enabled;
+            document.getElementById('noip-enabled-label').textContent = settings.enabled
+                ? t('noip.ddns_auto_on')
+                : t('noip.ddns_auto_off');
+            if (settings.hasPassword) {
+                document.getElementById('noip-password').placeholder = '•••••••• (saved)';
+            } else {
+                document.getElementById('noip-password').placeholder = '••••••••';
+            }
+        });
+    }
+
+    function noip_saveSettings() {
+        var hostname = document.getElementById('noip-hostname').value.trim();
+        var username = document.getElementById('noip-username').value.trim();
+        var password = document.getElementById('noip-password').value;
+        var enabled = document.getElementById('noip-enabled').checked;
+
+        if (!hostname || !username) {
+            noip_showToast(t('noip.toast_enter_hostname'), true);
+            return;
+        }
+
+        var payload = { hostname: hostname, username: username, enabled: enabled };
+        if (password) payload.password = password;
+
+        $.ajax({
+            url: '/api/noip/settings',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function () {
+                noip_showToast(t('noip.toast_settings_saved'));
+                document.getElementById('noip-enabled-label').textContent = enabled
+                    ? t('noip.ddns_auto_on')
+                    : t('noip.ddns_auto_off');
+                document.getElementById('noip-password').value = '';
+            },
+            error: function () {
+                noip_showToast(t('noip.toast_settings_error'), true);
+            }
+        });
+    }
+
+    function noip_updateNow() {
+        var resultEl = document.getElementById('noip-update-result');
+        resultEl.className = 'update-result show pending';
+        resultEl.style.background = 'rgba(255,204,0,0.08)';
+        resultEl.style.borderColor = 'rgba(255,204,0,0.2)';
+        resultEl.style.color = '#ffcc00';
+        resultEl.textContent = t('noip.updating');
+
+        $.ajax({
+            url: '/api/noip/update',
+            type: 'POST',
+            contentType: 'application/json',
+            success: function (data) {
+                if (data.success) {
+                    resultEl.className = 'update-result show success';
+                    resultEl.textContent = t('noip.update_success') + ' IP: ' + data.ip + ' | ' + t('noip.status') + ': ' + data.message;
+                    noip_refreshIp();
+                    noip_diagnose();
+                } else {
+                    resultEl.className = 'update-result show error';
+                    resultEl.textContent = t('noip.update_failed') + ' ' + (data.error || t('noip.status_error'));
+                }
+            },
+            error: function (xhr) {
+                resultEl.className = 'update-result show error';
+                var msg = t('noip.toast_network_error');
+                try { msg = xhr.responseJSON.error || msg; } catch (e) { }
+                resultEl.textContent = msg;
+            }
+        });
+    }
+
+    function noip_diagnose() {
+        $.get('/api/public-ip?' + Date.now(), function (ipData) {
+            $('#diag-public-ip').text(ipData.ip).removeClass('pending').addClass('match');
+
+            $.get('/api/noip/diagnose?' + Date.now(), function (data) {
+                if (data.error) {
+                    $('#diag-dns-ip').text(t('noip.status_not_configured')).removeClass('pending').addClass('mismatch');
+                    $('#diag-status').text('⚠ ' + data.error).removeClass('pending').addClass('mismatch');
+                    return;
+                }
+
+                $('#diag-dns-ip').text(data.dns.ip || data.dns.error || '---').removeClass('pending');
+
+                if (data.dns.error) {
+                    $('#diag-dns-ip').addClass('mismatch');
+                    $('#diag-status').text(t('noip.diag_domain_not_found')).removeClass('pending').addClass('mismatch');
+                } else if (data.dns.ip === ipData.ip) {
+                    $('#diag-dns-ip').addClass('match');
+                    $('#diag-status').text(t('noip.diag_matched')).removeClass('pending').addClass('match');
+                    $('#diag-warning').hide();
+                } else {
+                    $('#diag-dns-ip').addClass('mismatch');
+                    $('#diag-status').text(t('noip.diag_not_matched')).removeClass('pending').addClass('mismatch');
+                    var warning = t('noip.diag_domain_points_to') + data.dns.ip + '<br>';
+                    warning += t('noip.diag_server_sees') + ipData.ip + '<br><br>';
+                    if (data.dns.ip.startsWith('192.168.') || data.dns.ip.startsWith('10.') || data.dns.ip.startsWith('172.')) {
+                        warning += '<strong>' + t('noip.diag_local_ip_warning') + '</strong><br>';
+                        warning += t('noip.diag_local_ip_hint1') + '<br>';
+                        warning += t('noip.diag_local_ip_hint2');
+                    } else {
+                        warning += t('noip.diag_update_hint') + '<br>';
+                        warning += t('noip.diag_check_hint');
+                    }
+                    $('#diag-warning').html(warning).show();
+                }
+            }).fail(function () {
+                $('#diag-dns-ip').text(t('noip.status_error')).removeClass('pending').addClass('mismatch');
+                $('#diag-status').text(t('noip.diag_connection_failed')).removeClass('pending').addClass('mismatch');
+            });
+        }).fail(function () {
+            $('#diag-public-ip').text(t('noip.status_error')).removeClass('pending').addClass('mismatch');
+            $('#diag-status').text(t('noip.diag_ip_detect_failed')).removeClass('pending').addClass('mismatch');
+        });
+    }
+
+    function ssl_showResult(msg, isError) {
+        var el = document.getElementById('ssl-result');
+        el.className = 'update-result show ' + (isError ? 'error' : 'success');
+        el.textContent = msg;
+    }
+
+    function ssl_loadStatus() {
+        $.get('/api/ssl/status', function (data) {
+            var statusEl = document.getElementById('ssl-cert-status');
+            var badgeEl = document.getElementById('ssl-cert-badge');
+            var expiresEl = document.getElementById('ssl-cert-expires');
+            var domainsEl = document.getElementById('ssl-cert-domains');
+            var renewBtn = document.getElementById('ssl-renew-btn');
+            var accountBtn = document.getElementById('ssl-account-btn');
+
+            if (data.hasLetsEncrypt) {
+                statusEl.textContent = t('noip.cert_active_text');
+                statusEl.style.color = '#2ec76e';
+                badgeEl.className = 'status-badge success';
+                badgeEl.innerHTML = '<i class="fas fa-check-circle"></i> ' + t('noip.status_active');
+                var _loc = window.i18n && window.i18n.getLang() === 'ar' ? 'ar-EG' : 'en-US';
+                expiresEl.textContent = data.expiresAt ? new Date(data.expiresAt).toLocaleDateString(_loc) + ' (' + new Date(data.expiresAt).toLocaleTimeString(_loc) + ')' : '---';
+                expiresEl.style.color = '#2ec76e';
+                renewBtn.style.display = 'inline-flex';
+                accountBtn.style.display = 'none';
+                if (data.domains.length) {
+                    domainsEl.innerHTML = '<div style="font-size:0.85rem;color:var(--text-dim);">' + t('noip.domains_label') + ' <strong style="color:#2ec76e;">' + data.domains.join(', ') + '</strong></div>';
+                }
+            } else {
+                statusEl.textContent = t('noip.no_cert');
+                statusEl.style.color = '#ffcc00';
+                badgeEl.className = 'status-badge pending';
+                badgeEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + t('noip.not_verified_label');
+                expiresEl.textContent = '---';
+                expiresEl.style.color = 'var(--text-dim)';
+                renewBtn.style.display = 'none';
+                accountBtn.style.display = data.hasAccountKey ? 'none' : 'inline-flex';
+                domainsEl.innerHTML = '';
+            }
+        });
+    }
+
+    function ssl_createAccount() {
+        var btn = document.getElementById('ssl-account-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + t('noip.creating');
+
+        $.ajax({
+            url: '/api/ssl/create-account',
+            type: 'POST',
+            contentType: 'application/json',
+            success: function () {
+                ssl_showResult(t('noip.toast_account_created'));
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-user-check"></i> ' + t('noip.created');
+                btn.style.background = 'linear-gradient(135deg,#2ec76e,#22b573)';
+                ssl_loadStatus();
+            },
+            error: function (xhr) {
+                var msg = t('noip.toast_error');
+                try { msg = xhr.responseJSON.error || msg; } catch (e) { }
+                ssl_showResult(msg, true);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-user-plus"></i> ' + t('noip.create_account');
+            }
+        });
+    }
+
+    function ssl_requestCert() {
+        var hostname = document.getElementById('noip-hostname').value.trim();
+        if (!hostname) {
+            ssl_showResult(t('noip.toast_enter_domain'), true);
+            return;
+        }
+
+        var btn = document.getElementById('ssl-request-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + t('noip.verifying');
+
+        ssl_showResult(t('noip.requesting_cert_info'));
+
+        $.ajax({
+            url: '/api/ssl/request',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ domain: hostname }),
+            timeout: 15000,
+            success: function () {
+                ssl_pollTaskStatus(btn);
+            },
+            error: function (xhr) {
+                var msg = t('noip.toast_connection_error');
+                try { msg = xhr.responseJSON.error || msg; } catch (e) { }
+                ssl_showResult(msg, true);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-certificate"></i> ' + t('noip.request_cert');
+            }
+        });
+    }
+
+    function ssl_pollTaskStatus(btn) {
+        var resultEl = document.getElementById('ssl-result');
+        var pollInterval = setInterval(function () {
+            $.get('/api/ssl/task-status', function (data) {
+                resultEl.className = 'update-result show';
+                resultEl.style.background = 'rgba(255,204,0,0.08)';
+                resultEl.style.borderColor = 'rgba(255,204,0,0.2)';
+                resultEl.style.color = '#ffcc00';
+                resultEl.textContent = data.message;
+
+                if (data.status === 'done') {
+                    clearInterval(pollInterval);
+                    resultEl.className = 'update-result show success';
+                    resultEl.textContent = t('noip.toast_cert_obtained');
+                    btn.innerHTML = '<i class="fas fa-check"></i> ' + t('noip.verified_ok');
+                    btn.style.background = 'linear-gradient(135deg,#2ec76e,#22b573)';
+                    btn.disabled = false;
+                    ssl_loadStatus();
+                } else if (data.status === 'error') {
+                    clearInterval(pollInterval);
+                    resultEl.className = 'update-result show error';
+                    resultEl.textContent = data.message;
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-certificate"></i> ' + t('noip.request_cert');
+                    ssl_loadStatus();
+                }
+            });
+        }, 3000);
+    }
+
+    function ssl_renewCert() {
+        var btn = document.getElementById('ssl-renew-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + t('noip.renewing');
+
+        $.ajax({
+            url: '/api/ssl/renew',
+            type: 'POST',
+            contentType: 'application/json',
+            timeout: 300000,
+            success: function (data) {
+                if (data.success) {
+                    ssl_showResult(t('noip.toast_cert_renewed_reload'));
+                } else {
+                    ssl_showResult(data.error || t('noip.renew_failed'), true);
+                }
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i> ' + t('noip.renew_cert');
+                ssl_loadStatus();
+            },
+            error: function (xhr) {
+                var msg = t('noip.toast_error');
+                try { msg = xhr.responseJSON.error || msg; } catch (e) { }
+                ssl_showResult(msg, true);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i> ' + t('noip.renew_cert');
+            }
+        });
+    }
+
+    noip_refreshIp();
+    noip_loadSettings();
+    noip_diagnose();
+    ssl_loadStatus();
+</script>

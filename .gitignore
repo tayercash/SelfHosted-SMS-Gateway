@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.db
+certs/
+!certs/.gitkeep
+.vscode/
+.DS_Store
+Thumbs.db
+guard_config.json
+mouguard-error.log

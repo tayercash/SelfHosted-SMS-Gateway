@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="assets/css/messages.css">
+
+<div class="mobile-app">
+    <div class="view-panel" id="sidebar-view">
+        <div class="filter-wrap">
+            <select id="line-filter-select">
+                <option value="all" data-i18n="messages.all">📩 الكل</option>
+            </select>
+        </div>
+
+
+        <div id="contacts-list" class="list-container"></div>
+    </div>
+
+    <div class="view-panel hidden" id="chat-view">
+        <div class="header">
+            <button class="back-btn" onclick="showSidebar()"><i class="far fa-long-arrow-alt-right"></i></button>
+            <div class="header-info">
+                <span id="active-sender-name" data-i18n="messages.sender_name">اسم المرسل</span>
+                <small id="active-receiver-info"></small>
+            </div>
+            <button class="delete-conv-btn" onclick="deleteConversation(window.currentSender, window.currentReceiver)" data-i18n-title="messages.delete_chat" title="حذف المحادثة"><i class="fas fa-trash-alt"></i></button>
+        </div>
+        <div id="messages-container" class="messages-viewport"></div>
+    </div>
+</div>
+
+<script src="/assets/js/i18n.js"></script>
+<script src="assets/js/messages.js"></script>

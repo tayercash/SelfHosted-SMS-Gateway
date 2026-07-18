@@ -1,0 +1,990 @@
+/* الحاوية الأساسية للبطاقات */
+.cards-container {
+    display: flex;
+    /* تفعيل فليكس */
+    flex-wrap: wrap;
+    /* السماح للبطاقات بالنزول لسطر جديد إذا ضاق المكان */
+    gap: 10px;
+    /* المسافة بين كل فيزا والأخرى */
+    /* padding: 0 1rem; */
+    justify-content: center;
+    /* توسيط البطاقات في الشاشة */
+
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    /* تغيير المحاذاة لتبدأ من اليسار لسهولة التمرير */
+    gap: 12px;
+    margin-bottom: 1rem;
+    padding: 8px 12px;
+    background: #1e1e1e;
+    /* خلفية صلبة داكنة */
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: sticky;
+    top: 0;
+    /* سنجعله 0 دائماً داخل الحاوية لأن الحاوية نفسها تتحرك */
+    z-index: 100;
+
+    /* تفعيل السكرول الأفقي */
+    overflow-x: auto;
+    white-space: nowrap;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+    /* إخفاء السكرول في Firefox */
+    -ms-overflow-style: none;
+    /* إخفاء السكرول في IE/Edge */
+}
+
+.header::-webkit-scrollbar {
+    display: none;
+    /* إخفاء السكرول في Chrome/Safari */
+}
+
+.total_balance_container,
+.header-tools,
+.actions,
+.main-actions-group,
+.sort-dropdown,
+.custom-select-wrapper {
+    flex-shrink: 0;
+    /* منع العناصر من الانضغاط */
+}
+
+.header-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* تقليل المسافات البينية */
+}
+
+@media (max-width: 900px) {
+    .header {
+        padding: 5px 10px;
+    }
+
+    #total_visa_balance,
+    #wallets_total_balance,
+    #yellow_total_balance {
+        font-size: 15px;
+        /* تصغير الخط قليلاً */
+    }
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Grouping main action buttons */
+.main-actions-group {
+    display: flex;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.actions button {
+    width: 32px;
+    /* تصغير حجم الأزرار */
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.actions button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.actions button.add_wallet_btn,
+.actions button.add_visa_btn,
+.actions button.add_yellow_card_btn {
+    background: var(--primary-color);
+    color: #080809;
+    font-weight: bold;
+}
+
+.actions button.add_wallet_btn:hover,
+.actions button.add_visa_btn:hover,
+.actions button.add_yellow_card_btn:hover {
+    background: #ffa500;
+    color: #080809;
+}
+
+/* Sorting Group Styles */
+.sort-dropdown {
+    display: flex !important;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sort_btn {
+    width: 32px !important;
+    height: 32px !important;
+    background: var(--primary-color) !important;
+    border-radius: 6px !important;
+    color: #080809 !important;
+    font-weight: bold !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+/* Override custom-select margin inside groups */
+.sort-dropdown .custom-select-wrapper {
+    margin: 0 !important;
+    min-width: 110px !important;
+}
+
+.sort-dropdown .custom-select {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.sort-dropdown .custom-select-trigger {
+    padding: 5px 10px !important;
+    min-height: 30px !important;
+    font-size: 12px !important;
+}
+
+.total_balance_container {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: var(--shadow-md);
+}
+
+.total_balance_container .balance_label {
+    display: block;
+    font-size: 0.75rem;
+    color: #d1d5db;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+#total_balance {
+    display: block;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.visa-card {
+    position: relative;
+    padding: 25px 20px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #141418 0%, #1a1a20 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: var(--shadow-xl), inset 0 1px 1px rgba(255, 255, 255, 0.04);
+    font-family: 'Courier New', Courier, monospace;
+    direction: ltr;
+}
+
+.yellow-card {
+    background: linear-gradient(135deg, #ffcc00 0%, #d4a300 100%) !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    color: #080809 !important;
+    box-shadow: var(--shadow-glow-yellow-hover) !important;
+    direction: ltr !important;
+}
+
+.maxab-card {
+    background: linear-gradient(135deg, #1b3a60 0%, #0d1b2e 100%) !important;
+    border: 1px solid rgba(33, 150, 243, 0.25) !important;
+    color: white !important;
+    box-shadow: var(--shadow-lg) !important;
+    direction: ltr !important;
+}
+
+.maxab-card .label {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.yellow-card .chip .action.yellow_card_transaction {
+    background: #080809 !important;
+    color: #ffcc00 !important;
+}
+
+.yellow-card .label {
+    color: rgba(8, 8, 9, 0.7) !important;
+}
+
+.yellow-card .value {
+    color: #080809 !important;
+}
+
+.yellow-card .card-number {
+    color: #080809 !important;
+    text-shadow: none !important;
+}
+
+.yellow-card .logo {
+    color: #080809 !important;
+}
+
+/* انميشن للتحديث */
+.visa-card.updated {
+    background: linear-gradient(135deg, #2a2a2a 0%, #535353 100%);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
+    transform: scale(1.02);
+}
+
+.detail-item.updated.add-money .value {
+    color: #4CAF50;
+    font-weight: bold;
+    animation: highlight-green 1s ease-in-out;
+}
+
+.detail-item.updated.pay .value {
+    color: #F44336;
+    font-weight: bold;
+    animation: highlight-red 1s ease-in-out;
+}
+
+.detail-item.updated.limit-progress .value {
+    color: #2196F3;
+    font-weight: bold;
+    animation: highlight-blue 1s ease-in-out;
+}
+
+@keyframes highlight-green {
+    0% {
+        color: #4CAF50;
+    }
+
+    50% {
+        color: #4CAF50;
+    }
+
+    100% {
+        color: #4CAF50;
+    }
+}
+
+@keyframes highlight-red {
+    0% {
+        color: #F44336;
+    }
+
+    50% {
+        color: #F44336;
+    }
+
+    100% {
+        color: #F44336;
+    }
+}
+
+@keyframes highlight-blue {
+    0% {
+        color: #2196F3;
+    }
+
+    50% {
+        color: #2196F3;
+    }
+
+    100% {
+        color: #2196F3;
+    }
+}
+
+/* استخدام Flexbox في الهيدر لتوزيع الشعار والرقاقة */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chip {
+    position: relative;
+    width: 60px;
+    height: 40px;
+    background: linear-gradient(135deg, #ffcc00 0%, #d4a300 100%) !important;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    box-shadow: var(--shadow-chip);
+}
+
+.chip:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-chip-hover);
+}
+
+.chip .action {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border-radius: 12px;
+    color: #080809 !important;
+    font-weight: bold;
+}
+
+.yellow-card .chip {
+    background: linear-gradient(135deg, #121214 0%, #1c1c1f 100%) !important;
+    border: 1px solid rgba(255, 204, 0, 0.25) !important;
+}
+
+.yellow-card .chip .action {
+    color: #ffcc00 !important;
+}
+
+.chip .action.transaction i {
+    font-size: 18px;
+}
+
+.logo {
+    font-style: italic;
+    font-weight: bold;
+    font-size: 24px;
+}
+
+.card-number {
+    font-size: 22px;
+    letter-spacing: 2px;
+    margin: 4px 0;
+    direction: ltr;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.copy-wallet-num {
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.copy-wallet-num:hover {
+    opacity: 1;
+    transform: scale(1.15);
+    color: #ffcc00;
+}
+
+.copy-wallet-num.copied {
+    opacity: 1;
+    color: #2ecc71;
+    font-size: 12px;
+}
+
+/* استخدام Grid لترتيب البيانات في 2 عمود و 2 صف */
+.card-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    /* عمودين متساويين */
+    gap: 4px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.label {
+    font-size: 10px;
+    color: #bbb;
+    margin-bottom: 3px;
+}
+
+.value {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.visa_actions,
+.merchant_actions {
+    display: flex;
+    gap: 10px;
+}
+
+.visa_actions .action,
+.merchant_actions .action {
+    width: 30px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 0.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.visa_actions .action:hover,
+.merchant_actions .action:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.visa_actions .action:active,
+.merchant_actions .action:active {
+    background: rgba(255, 255, 255, 0.6);
+}
+
+/* تنسيق الصفوف في الفورم */
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+.form-row > .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+/* تنسيق الفورمات في الـ popup */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group input,
+.form-group textarea {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-group button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+
+}
+
+.form-group button:hover {
+    background: #0056b3;
+}
+
+/* تنسيق قائمة العمليات */
+.transactions-container {
+    max-height: 380px;
+    overflow-y: auto;
+    padding: 12px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* تخصيص السكرول بار الخاص بقائمة العمليات ليكون خفيفاً وأنيقاً */
+.transactions-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.transactions-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+}
+
+.transactions-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    transition: background 0.3s;
+}
+
+.transactions-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 204, 0, 0.3);
+}
+
+.transaction-item {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 14px !important;
+    padding: 16px !important;
+    display: block !important;
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 0 !important;
+    position: relative;
+}
+
+.transaction-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    inset-inline-end: 0;
+    width: 4px;
+    background: transparent;
+    border-radius: 0 14px 14px 0;
+    transition: background 0.25s;
+}
+
+.transaction-item:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 204, 0, 0.2) !important;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.transaction-item:hover::before {
+    background: var(--primary-color, #ffcc00);
+}
+
+.transaction-item + .transaction-item {
+    margin-top: 10px !important;
+}
+
+.t-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.t-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.t-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.t-info span {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.t-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.t-type-badge.positive {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.t-type-badge.negative {
+    background: rgba(244, 63, 94, 0.12);
+    color: #f43f5e;
+    border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+.t-note {
+    font-size: 0.78rem;
+    color: #b0b0b0;
+    font-style: italic;
+    padding: 4px 0;
+}
+
+.tx-delete-btn {
+    background: rgba(244, 63, 94, 0.1);
+    border: 1px solid rgba(244, 63, 94, 0.2);
+    color: #f43f5e;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.tx-delete-btn:hover {
+    background: rgba(244, 63, 94, 0.25);
+    border-color: rgba(244, 63, 94, 0.4);
+    transform: scale(1.1);
+}
+
+.total_balance_container {
+    background: rgba(18, 18, 20, 0.85) !important;
+    padding: 0 16px;
+    height: 38px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 204, 0, 0.25) !important;
+    box-shadow: var(--shadow-md) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.total_balance_container span {
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    color: #ffcc00 !important;
+    text-shadow: 0 0 8px rgba(255, 204, 0, 0.3) !important;
+}
+
+/* Unifying Filter Select style with Sort Group */
+.visa_filter+.custom-select-wrapper {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    min-width: 100px;
+    transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+.visa_filter+.custom-select-wrapper:hover {
+    border-color: rgba(255, 204, 0, 0.4);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.visa_filter+.custom-select-wrapper .custom-select {
+    border: none !important;
+    background: transparent !important;
+}
+
+/* Animated Groups */
+.main-actions-group,
+.sort-dropdown {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.main-actions-group:hover,
+.sort-dropdown:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: rgba(255, 204, 0, 0.35);
+}
+
+.transaction-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.transaction-amount {
+    font-size: 1.15rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.transaction-amount.positive {
+    color: #10b981 !important; /* أخضر زمردي مريح للعين */
+    text-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+}
+
+.transaction-amount.negative {
+    color: #f43f5e !important; /* أحمر ناعم وجذاب */
+    text-shadow: 0 0 12px rgba(244, 63, 94, 0.15);
+}
+
+.transaction-date {
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+.transaction-user {
+    font-size: 12px;
+    color: #cbcbcb;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.t-meta {
+    margin-top: 6px !important;
+    color: #9ca3af !important;
+    font-size: 11px !important;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.t-meta i {
+    color: var(--primary-color, #ffcc00);
+    margin-inline-start: 4px;
+    font-size: 12px;
+}
+
+.t-meta span {
+    display: inline-flex;
+    align-items: center;
+}
+
+.transaction-note, .t-note {
+    margin-top: 10px !important;
+    font-size: 13px !important;
+    color: #e5e7eb !important;
+    padding: 10px 14px !important;
+    background: rgba(255, 204, 0, 0.04) !important;
+    border-inline-end: 3px solid #ffcc00 !important;
+    border-radius: 4px 8px 8px 4px !important;
+    font-family: inherit !important;
+    line-height: 1.5 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    box-sizing: border-box !important;
+}
+
+.transaction-note::before, .t-note::before {
+    content: '\f249'; /* sticky-note */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 400;
+    color: #ffcc00;
+    font-size: 13px;
+    display: inline-block;
+}
+
+.t-receipt {
+    margin-top: 8px !important;
+}
+
+.t-receipt a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 204, 0, 0.1);
+    color: #ffcc00 !important;
+    font-size: 11px !important;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 204, 0, 0.15);
+    text-decoration: none !important;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.t-receipt a:hover {
+    background: #ffcc00;
+    color: #080809 !important;
+    box-shadow: var(--shadow-glow-yellow);
+    transform: translateY(-1px);
+}
+
+.visa_filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: var(--shadow-md);
+    color: #ffffff;
+}
+
+.search_container {
+    position: sticky !important;
+    top: 70px !important;
+    z-index: 99 !important;
+    background: var(--elmnt_back) !important;
+    padding: 10px 16px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    margin: 4px 0 12px 0 !important;
+}
+
+@media (min-width: 992px) {
+    .search_container {
+        margin: 8px 0 16px 0 !important;
+    }
+}
+
+/* Mobile performance: simplify card rendering */
+@media (max-width: 600px) {
+    .visa-card {
+        padding: 18px 14px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    .visa-card.updated {
+        transform: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+}
+
+/* Print capture styles */
+#captureArea {
+    width: 1600px;
+    height: 416px;
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 40px;
+    box-sizing: border-box;
+    direction: rtl;
+}
+
+.real-logo {
+    width: 250px;
+    height: auto;
+    justify-self: center;
+}
+
+.data-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.real-phone {
+    font-size: 160px;
+    font-weight: 900;
+    line-height: 1.2;
+    margin: 0;
+    direction: ltr;
+    color: #000;
+}
+
+.real-name {
+    font-size: 100px;
+    font-weight: 900;
+    line-height: 1.5;
+    color: #000;
+}
+
+/* Merchants Selection List */
+.merchants-selection-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 5px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.merchant-option-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.merchant-option-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary-color);
+    transform: translateX(-3px);
+}
+
+.merchant-option-item.selected {
+    background: rgba(255, 204, 0, 0.12);
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-glow-yellow);
+}
+
+.merchant-option-item .m-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.merchant-option-item .m-name {
+    font-weight: bold;
+    font-size: 14px;
+    color: #fff;
+}
+
+.merchant-option-item .m-balance {
+    font-size: 11px;
+    color: #aaa;
+}
+
+.merchant-option-item .m-check {
+    color: var(--primary-color);
+    font-size: 16px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.merchant-option-item.selected .m-check {
+    opacity: 1;
+}
+
+/* Custom Scrollbar for the list */
+.merchants-selection-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.merchants-selection-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.merchants-selection-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.merchants-selection-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}

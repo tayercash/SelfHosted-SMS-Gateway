@@ -1,0 +1,102 @@
+[
+    {
+        "name": "e& money - مدفوع وارد",
+        "description": "كشف مدفوعات e& money (اتصالات) الواردة",
+        "provider": "etisalat",
+        "header_pattern": "e&|etisalat|اتصالات",
+        "type": "incoming",
+        "regex_pattern": "تم إستلام مبلغ ([\\d,]+\\.\\d{2}) ج\\.م من رقم (\\d+) المسجل باسم (.+?) بنجاح\\. رصيد محفظتك الحالى ([\\d,]+\\.\\d{2}) ج\\.م",
+        "field_mappings": [
+            { "name": "amount", "type": "float", "group": 1, "label": "المبلغ" },
+            { "name": "sender_number", "type": "string", "group": 2, "label": "رقم المحول" },
+            { "name": "sender_name", "type": "string", "group": 3, "label": "اسم المرسل" },
+            { "name": "balance_after", "type": "float", "group": 4, "label": "الرصيد بعد" }
+        ]
+    },
+    {
+        "name": "e& money - تحويل صادر",
+        "description": "كشف تحويلات e& money الصادرة",
+        "provider": "etisalat",
+        "header_pattern": "e&|etisalat|اتصالات",
+        "type": "outgoing",
+        "regex_pattern": "تم تحويل مبلغ ([\\d,]+\\.\\d{2}) ج\\.م الى رقم (\\d+) بنجاح\\. رسوم التحويل ([\\d,]+\\.\\d{2}) جنيه\\.رصيد محفظتك الحالى ([\\d,]+\\.\\d{2})",
+        "field_mappings": [
+            { "name": "amount", "type": "float", "group": 1, "label": "المبلغ" },
+            { "name": "receiver_number", "type": "string", "group": 2, "label": "رقم المستقبل" },
+            { "name": "transfer_fee", "type": "float", "group": 3, "label": "رسوم التحويل" },
+            { "name": "balance_after", "type": "float", "group": 4, "label": "الرصيد بعد" }
+        ]
+    },
+    {
+        "name": "فودافون كاش - مدفوع وارد",
+        "description": "كشف مدفوعات فودافون كاش الواردة",
+        "provider": "vodafone",
+        "header_pattern": "VF-Cash|vodafone|فودافون",
+        "type": "incoming",
+        "regex_pattern": "تم استلام مبلغ ([\\d,]+(?:\\.\\d+)?) جنيه من رقم (\\d+) المسجل بإسم (.+?) على رقم محفظتك\\s*(\\d+)\\.\\s*رصيدك الحالي: ([\\d,]+(?:\\.\\d+)?) جنيه",
+        "field_mappings": [
+            { "name": "amount", "type": "float", "group": 1, "label": "المبلغ" },
+            { "name": "sender_number", "type": "string", "group": 2, "label": "رقم المحول" },
+            { "name": "sender_name", "type": "string", "group": 3, "label": "اسم المرسل" },
+            { "name": "wallet_number", "type": "string", "group": 4, "label": "رقم المحفظة" },
+            { "name": "balance_after", "type": "float", "group": 5, "label": "الرصيد بعد" }
+        ]
+    },
+    {
+        "name": "فودافون كاش - تحويل صادر",
+        "description": "كشف تحويلات فودافون كاش الصادرة",
+        "provider": "vodafone",
+        "header_pattern": "VF-Cash|vodafone|فودافون",
+        "type": "outgoing",
+        "regex_pattern": "تم تحويل ([\\d,]+(?:\\.\\d+)?) جنيه لرقم (\\d+) مصاريف الخدمة ([\\d,]+(?:\\.\\d+)?) جنيه رصيد حسابك فى فودافون كاش الحالي ([\\d,]+(?:\\.\\d+)?)",
+        "field_mappings": [
+            { "name": "amount", "type": "float", "group": 1, "label": "المبلغ" },
+            { "name": "receiver_number", "type": "string", "group": 2, "label": "رقم المستقبل" },
+            { "name": "transfer_fee", "type": "float", "group": 3, "label": "مصاريف الخدمة" },
+            { "name": "balance_after", "type": "float", "group": 4, "label": "الرصيد بعد" }
+        ]
+    },
+    {
+        "name": "فودافون كاش - مدفوع وارد (رقمين عشريين)",
+        "description": "كشف مدفوعات فودافون كاش الواردة بمبلغ برقمين عشريين",
+        "provider": "vodafone",
+        "header_pattern": "VF-Cash|vodafone|فودافون",
+        "type": "incoming",
+        "regex_pattern": "تم استلام مبلغ ([\\d,]+\\.\\d{2}) جنيه من رقم (\\d+) المسجل بإسم (.+?) على رقم محفظتك\\s*(\\d+)\\.\\s*رصيدك الحالي: ([\\d,]+(?:\\.\\d+)?) جنيه",
+        "field_mappings": [
+            { "name": "amount", "type": "float", "group": 1, "label": "المبلغ" },
+            { "name": "sender_number", "type": "string", "group": 2, "label": "رقم المحول" },
+            { "name": "sender_name", "type": "string", "group": 3, "label": "اسم المرسل" },
+            { "name": "wallet_number", "type": "string", "group": 4, "label": "رقم المحفظة" },
+            { "name": "balance_after", "type": "float", "group": 5, "label": "الرصيد بعد" }
+        ]
+    },
+    {
+        "name": "فودافون كاش - مدفوع وارد (بدون مبلغ مبدئي)",
+        "description": "كشف مدفوعات فودافون كاش الواردة لرسائل تبدأ بـ م أو من رقم",
+        "provider": "vodafone",
+        "header_pattern": "VF-Cash|vodafone|فودافون",
+        "type": "incoming",
+        "regex_pattern": "م (\\d+) المسجل بإسم (.+?) على رقم محفظتك\\s*(\\d+)\\.\\s*رصيدك الحالي: ([\\d,]+(?:\\.\\d+)?) جنيه",
+        "field_mappings": [
+            { "name": "sender_number", "type": "string", "group": 1, "label": "رقم المحول" },
+            { "name": "sender_name", "type": "string", "group": 2, "label": "اسم المرسل" },
+            { "name": "wallet_number", "type": "string", "group": 3, "label": "رقم المحفظة" },
+            { "name": "balance_after", "type": "float", "group": 4, "label": "الرصيد بعد" }
+        ]
+    },
+    {
+        "name": "e& money - مدفوع وارد (بدون فواصل)",
+        "description": "كشف مدفوعات e& money الواردة بدون فواصل في الأرقام",
+        "provider": "etisalat",
+        "header_pattern": "e&|etisalat|اتصالات",
+        "type": "incoming",
+        "regex_pattern": "تم إستلام مبلغ (\\d+\\.\\d{2}) ج\\.م من رقم (\\d+) المسجل باسم (.+?) بنجاح\\. رصيد محفظتك الحالى (\\d+\\.\\d{2}) ج\\.م",
+        "field_mappings": [
+            { "name": "amount", "type": "float", "group": 1, "label": "المبلغ" },
+            { "name": "sender_number", "type": "string", "group": 2, "label": "رقم المحول" },
+            { "name": "sender_name", "type": "string", "group": 3, "label": "اسم المرسل" },
+            { "name": "balance_after", "type": "float", "group": 4, "label": "الرصيد بعد" }
+        ]
+    }
+]

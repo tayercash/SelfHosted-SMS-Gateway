@@ -1,0 +1,490 @@
+<style>
+    #modems_list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 16px;
+    }
+
+    .modem-device-card {
+        background: var(--sidebar-bg);
+        border: 1px solid var(--mou_border_color);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        transition: border-color .3s;
+    }
+
+    .modem-device-card:hover {
+        border-color: rgba(255, 204, 0, .25);
+    }
+
+    .modem-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        gap: 12px;
+        flex-wrap: wrap;
+        border-bottom: 1px solid var(--mou_border_color);
+    }
+
+    .modem-card-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .modem-device-icon {
+        display: inline-flex;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    .modem-device-icon.phone {
+        background: rgba(46, 199, 110, .12);
+        color: #2ec76e;
+    }
+
+    .modem-device-icon.modem {
+        background: rgba(255, 204, 0, .1);
+        color: #ffcc00;
+    }
+
+    .modem-device-info {
+        min-width: 0;
+    }
+
+    .modem-device-name {
+        font-weight: 700;
+        color: var(--primary-color);
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .modem-device-meta {
+        font-size: .75rem;
+        color: var(--text-dim);
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 2px;
+    }
+
+    .modem-device-meta .device-id-text {
+        direction: ltr;
+        font-family: monospace;
+        font-size: .7rem;
+    }
+
+    .modem-sim-count {
+        background: rgba(255, 204, 0, .1);
+        color: var(--primary-color);
+        font-size: .7rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+
+    .modem-card-header-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    .modem-card-body {
+        padding: 0;
+    }
+
+    .modem-sim-row {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        gap: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, .03);
+        transition: background .2s;
+    }
+
+    .modem-sim-row:last-child {
+        border-bottom: none;
+    }
+
+    .modem-sim-row:hover {
+        background: rgba(255, 204, 0, .03);
+    }
+
+    .modem-sim-num {
+        font-weight: 700;
+        color: var(--primary-color);
+        direction: ltr;
+        font-size: .9rem;
+        min-width: 120px;
+    }
+
+    .modem-sim-path {
+        font-size: .7rem;
+        color: var(--text-dim);
+        direction: ltr;
+        margin-top: 1px;
+    }
+
+    .modem-sim-slot {
+        background: rgba(255, 255, 255, .06);
+        padding: 3px 10px;
+        border-radius: 8px;
+        font-size: .75rem;
+        font-weight: 600;
+        color: var(--text-dim);
+        min-width: 50px;
+        text-align: center;
+    }
+
+    .modem-sim-signal {
+        min-width: 70px;
+    }
+
+    .modem-sim-status {
+        min-width: 80px;
+    }
+
+    .modem-sim-user {
+        font-size: .8rem;
+        color: var(--text-dim);
+        min-width: 100px;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: .7rem;
+        font-weight: 600;
+    }
+
+    .status-badge.online {
+        background: rgba(46, 199, 110, .15);
+        color: #2ec76e;
+    }
+
+    .status-badge.busy {
+        background: rgba(245, 158, 11, .15);
+        color: #f59e0b;
+        animation: pulse 1s infinite;
+    }
+
+    .status-badge.offline {
+        background: rgba(239, 68, 68, .15);
+        color: #ef4444;
+    }
+
+    .signal-bar {
+        display: inline-flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 18px;
+    }
+
+    .signal-bar .bar {
+        width: 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, .1);
+        transition: all .3s;
+    }
+
+    .signal-bar .bar.on {
+        background: #2ec76e;
+    }
+
+    .signal-bar .bar.on.medium {
+        background: #f59e0b;
+    }
+
+    .signal-bar .bar.on.low {
+        background: #ef4444;
+    }
+
+    .vibrate-btn {
+        background: none;
+        border: 1px solid rgba(255, 204, 0, .3);
+        color: var(--primary-color);
+        border-radius: 8px;
+        padding: 6px 10px;
+        cursor: pointer;
+        font-size: .95rem;
+        transition: all .2s;
+    }
+
+    .vibrate-btn:hover {
+        background: rgba(255, 204, 0, .15);
+        border-color: var(--primary-color);
+        transform: scale(1.1);
+    }
+
+    .vibrate-btn:active {
+        transform: scale(.9);
+    }
+
+    .vibrate-btn.sending {
+        pointer-events: none;
+        opacity: .5;
+    }
+
+    @keyframes vibrate {
+
+        0%,
+        100% {
+            transform: rotate(0deg);
+        }
+
+        25% {
+            transform: rotate(-10deg);
+        }
+
+        75% {
+            transform: rotate(10deg);
+        }
+    }
+
+    .vibrate-btn.shake {
+        animation: vibrate .3s ease-in-out;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: .4;
+        }
+    }
+
+    .modems-empty {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-dim);
+    }
+
+    .modems-empty i {
+        font-size: 3rem;
+        margin-bottom: 12px;
+        display: block;
+        opacity: .3;
+    }
+
+    .modem-sims-label {
+        padding: 8px 20px;
+        font-size: .7rem;
+        font-weight: 700;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        background: rgba(255, 204, 0, .04);
+        border-bottom: 1px solid var(--mou_border_color);
+    }
+
+    @media (max-width: 700px) {
+        #modems_list {
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        }
+
+        .modem-card-header {
+            padding: 12px 14px;
+        }
+
+        .modem-sim-row {
+            padding: 10px 14px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .modem-sim-num {
+            min-width: auto;
+        }
+
+        .modem-sim-user {
+            min-width: auto;
+        }
+    }
+</style>
+
+<div class="page-wrap">
+    <div class="header" style="margin-bottom:16px;">
+        <div class="header-left" style="display:flex;align-items:center;gap:10px;">
+            <h2 style="color:var(--primary-color);font-size:1.1rem;display:flex;align-items:center;gap:8px;margin:0;">
+                <i class="fas fa-microchip"></i> <span data-i18n="modems.title">الأجهزة المتصلة</span>
+            </h2>
+            <span class="at-count" id="modems_count" style="color:var(--text-dim);font-size:0.85rem;"></span>
+        </div>
+        <div class="header-tools" style="display:flex;gap:8px;align-items:center;">
+            <button onclick="window.parent.document.getElementById('dl-apk-btn').click()"
+                data-i18n-title="modems.connection_setup" title="بيانات الاتصال"
+                style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.85rem;transition:all 0.3s;">
+                <i class="fas fa-plug"></i>
+            </button>
+            <button onclick="loadModems()" data-i18n-title="modems.refresh" title="تحديث"
+                style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.85rem;transition:all 0.3s;">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="modems_list">
+        <div class="modems-empty"><i class="fas fa-spinner fa-spin"></i> <span data-i18n="modems.loading">جاري
+                التحميل...</span></div>
+    </div>
+</div>
+
+<script src="/assets/js/i18n.js"></script>
+<script>
+    var socket = window.socket;
+    var _lastModemsData = null;
+
+    document.addEventListener('i18n:ready', function () {
+        if (_lastModemsData) renderModems(_lastModemsData);
+    });
+
+    function getSignalBars(signal) {
+        var bars = '';
+        var count = signal > 80 ? 4 : signal > 60 ? 3 : signal > 30 ? 2 : signal > 10 ? 1 : 0;
+        for (var i = 0; i < 4; i++) {
+            var cls = i < count ? 'on' : '';
+            if (i < count) {
+                if (signal <= 30) cls += ' low';
+                else if (signal <= 60) cls += ' medium';
+            }
+            bars += '<div class="bar ' + cls + '"></div>';
+        }
+        return '<div class="signal-bar">' + bars + '</div>';
+    }
+
+    function getStatusBadge(modem) {
+        if (!modem.number || modem.number === 'Searching...') return '<span class="status-badge offline">' + t('modems.status_disconnected') + '</span>';
+        if (modem.isBusy) return '<span class="status-badge busy">' + t('modems.status_busy') + '</span>';
+        return '<span class="status-badge online">' + t('modems.status_connected') + '</span>';
+    }
+
+    function renderModems(modems) {
+        _lastModemsData = modems;
+        var container = document.getElementById('modems_list');
+        var countEl = document.getElementById('modems_count');
+        if (!container) return;
+        if (!modems || modems.length === 0) {
+            container.innerHTML = '<div class="modems-empty"><i class="fas fa-plug"></i> ' + t('modems.no_device') + '</div>';
+            if (countEl) countEl.textContent = '';
+            return;
+        }
+        if (countEl) countEl.textContent = '(' + modems.length + ')';
+
+        var devices = {};
+        modems.forEach(function (m) {
+            var did = m.deviceId || m.path;
+            if (!devices[did]) devices[did] = { info: m, sims: [] };
+            devices[did].sims.push(m);
+        });
+
+        var h = '';
+        Object.keys(devices).forEach(function (did) {
+            var dev = devices[did];
+            var info = dev.info;
+            var sims = dev.sims;
+            var isPhone = info.isPhone;
+            var iconClass = isPhone ? 'phone' : 'modem';
+            var iconHtml = isPhone ? '<i class="fas fa-mobile-alt"></i>' : '<i class="fas fa-sim-card"></i>';
+
+            h += '<div class="modem-device-card" data-device="' + did + '">';
+            h += '<div class="modem-card-header">';
+            h += '<div class="modem-card-header-left">';
+            h += '<span class="modem-device-icon ' + iconClass + '">' + iconHtml + '</span>';
+            h += '<div class="modem-device-info">';
+            h += '<div class="modem-device-name">' + (info.deviceName || '—') + ' <span class="modem-sim-count">' + sims.length + ' SIM</span></div>';
+            h += '<div class="modem-device-meta">';
+            if (info.androidVersion) h += '<span>Android ' + info.androidVersion + '</span>';
+            if (info.deviceId && info.deviceId !== 'unknown') h += '<span class="device-id-text">' + info.deviceId.substring(0, 12) + '…</span>';
+            h += '</div></div></div>';
+            h += '<div class="modem-card-header-right">';
+            if (isPhone) h += '<button class="vibrate-btn" onclick="vibratePhone(\'' + info.path + '\')" title="' + t('modems.action_ring') + '"><i class="fas fa-mobile-alt"></i></button>';
+            h += '</div></div>';
+
+            h += '<div class="modem-card-body">';
+            h += '<div class="modem-sims-label">' + t('modems.sims_label', 'الخطوط') + ' (' + sims.length + ')</div>';
+
+            sims.forEach(function (m) {
+                var num = m.number && m.number !== 'Searching...' ? m.number : t('modems.unknown');
+                var signalHtml = isPhone ? '<span style="color:#2ec76e;font-size:.8rem;">✓</span>' : getSignalBars(m.signal || 0);
+                var simSlotLabel = m.simSlot !== undefined ? 'SIM ' + (parseInt(m.simSlot) + 1) : '-';
+                var ownerLabel = m.currentOwner ? m.currentOwner : (m.lastRequester ? m.lastRequester + ' ' + t('modems.owner_previous') : '-');
+                var statusBadge = getStatusBadge(m);
+
+                h += '<div class="modem-sim-row" data-path="' + m.path + '">';
+                h += '<div><div class="modem-sim-num">' + num + '</div><div class="modem-sim-path">' + m.path + '</div></div>';
+                h += '<div class="modem-sim-slot">' + simSlotLabel + '</div>';
+                h += '<div class="modem-sim-signal">' + signalHtml + '</div>';
+                h += '<div class="modem-sim-status">' + statusBadge + '</div>';
+                h += '<div class="modem-sim-user">' + ownerLabel + '</div>';
+                h += '</div>';
+            });
+
+            h += '</div></div>';
+        });
+
+        container.innerHTML = h;
+    }
+
+    function loadModems() {
+        $.post('/api/ussd/list-modems', function (data) {
+            if (data && data.modems) {
+                localModemList = data.modems;
+                window.localModemList = data.modems;
+                renderModems(data.modems);
+            }
+        }).fail(function () {
+            document.getElementById('modems_list').innerHTML = '<div class="modems-empty"><i class="fas fa-exclamation-triangle"></i> ' + t('modems.error_load_settings') + '</div>';
+        });
+    }
+
+    function vibratePhone(path) {
+        if (!socket || !socket.connected) {
+            alert(t('modems.error_server_offline'));
+            return;
+        }
+        var btn = document.querySelector('.vibrate-btn[onclick*="' + path + '"]');
+        if (btn) btn.classList.add('sending', 'shake');
+        socket.emit('vibrate-phone', { path: path }, function (res) {
+            if (btn) { btn.classList.remove('sending'); setTimeout(function () { btn.classList.remove('shake'); }, 300); }
+            if (res && res.error) alert(t('modems.error_resend_failed') + ' ' + res.error);
+        });
+    }
+
+    loadModems();
+
+    socket.on('modem-list', function (data) {
+        if (data && data.modems) {
+            localModemList = data.modems;
+            window.localModemList = data.modems;
+            renderModems(data.modems);
+        }
+    });
+
+    socket.on('signal-update', function (data) {
+        var row = document.querySelector('#modems_list .modem-sim-row[data-path="' + data.port + '"]');
+        if (row) {
+            var signalCell = row.querySelector('.modem-sim-signal');
+            if (signalCell) signalCell.innerHTML = getSignalBars(data.signal);
+        }
+    });
+</script>

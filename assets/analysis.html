@@ -1,0 +1,1372 @@
+<style>
+    .al-wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 16px;
+    }
+    .al-header {
+        background: var(--sidebar-bg);
+        border: 1px solid var(--mou_border_color);
+        border-radius: 20px;
+        padding: 16px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        box-shadow: var(--shadow-md);
+    }
+    .al-header h2 {
+        color: var(--primary-color);
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .tabs button {
+        padding: 10px 24px;
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.04);
+        color: var(--text-dim);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.9rem;
+        transition: all 0.3s;
+        font-weight: 500;
+    }
+    .tabs button:hover {
+        border-color: rgba(255,204,0,0.3);
+        color: var(--primary-color);
+    }
+    .tabs button.active {
+        background: rgba(255,204,0,0.12);
+        border-color: rgba(255,204,0,0.3);
+        color: var(--primary-color);
+    }
+    .al-section { display: none; }
+    .al-section.active { display: block; }
+    .al-card {
+        background: var(--sidebar-bg);
+        border: 1px solid var(--mou_border_color);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 20px;
+    }
+    .al-card h3 {
+        color: var(--primary-color);
+        font-size: 1rem;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .al-card label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.8rem;
+        color: var(--text-dim);
+        font-weight: 500;
+    }
+    .al-card textarea,
+    .al-card input,
+    .al-card select {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1.5px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.04);
+        color: #fff;
+        font-family: inherit;
+        font-size: 0.9rem;
+        transition: border-color 0.3s;
+        box-sizing: border-box;
+    }
+    .al-card textarea:focus,
+    .al-card input:focus,
+    .al-card select:focus {
+        outline: none;
+        border-color: rgba(255,204,0,0.5);
+    }
+    .al-card textarea { resize: vertical; min-height: 80px; }
+    .al-card select option { background: #1a1a2e; color: #fff; }
+    .al-card .form-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+    .al-card .form-group { flex: 1; min-width: 200px; }
+    .btn-primary {
+        padding: 10px 24px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-family: inherit;
+        background: linear-gradient(135deg, #ffcc00, #ff9900);
+        color: #0b0a02;
+        white-space: nowrap;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(255,204,0,0.3);
+    }
+    .btn-danger {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: #fff;
+    }
+    .btn-danger:hover {
+        box-shadow: 0 4px 15px rgba(239,68,68,0.3);
+    }
+    .btn-sm {
+        padding: 6px 14px;
+        font-size: 0.8rem;
+    }
+    .btn-outline {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.15);
+        color: var(--text-main);
+    }
+    .btn-outline:hover {
+        border-color: rgba(255,204,0,0.3);
+        color: var(--primary-color);
+        box-shadow: none;
+        transform: none;
+    }
+    .result-box {
+        background: rgba(46,199,110,0.06);
+        border: 1px solid rgba(46,199,110,0.15);
+        border-radius: 12px;
+        padding: 16px;
+        margin-top: 12px;
+    }
+    .result-box.mismatch {
+        background: rgba(239,68,68,0.06);
+        border-color: rgba(239,68,68,0.15);
+    }
+    .result-box h4 {
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .result-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+    }
+    .result-table td {
+        padding: 6px 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .result-table td:first-child {
+        color: var(--text-dim);
+        font-weight: 500;
+        width: 140px;
+    }
+    .rule-item {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        transition: all 0.3s;
+    }
+    .rule-item:hover {
+        border-color: rgba(255,204,0,0.15);
+    }
+    .rule-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .rule-name {
+        font-weight: 700;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .rule-badge {
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+    .badge-incoming { background: rgba(46,199,110,0.15); color: #2ec76e; }
+    .badge-outgoing { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .badge-provider { background: rgba(99,102,241,0.15); color: #818cf8; }
+    .badge-disabled { background: rgba(255,255,255,0.08); color: var(--text-dim); }
+    .rule-regex {
+        font-family: monospace;
+        font-size: 0.8rem;
+        color: var(--text-dim);
+        direction: ltr;
+        text-align: left;
+        word-break: break-all;
+        margin-bottom: 8px;
+        padding: 6px 10px;
+        background: rgba(0,0,0,0.15);
+        border-radius: 6px;
+    }
+    .rule-fields {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+    }
+    .rule-field-tag {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background: rgba(255,204,0,0.08);
+        color: var(--primary-color);
+        border: 1px solid rgba(255,204,0,0.1);
+    }
+    .rule-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    }
+    .toggle {
+        position: relative;
+        width: 40px;
+        height: 22px;
+        cursor: pointer;
+        flex-shrink: 0;
+        display: inline-block;
+    }
+    .toggle input { display: none; }
+    .toggle .slider {
+        position: absolute;
+        inset: 0;
+        background: #555;
+        border-radius: 22px;
+        transition: 0.3s;
+    }
+    .toggle .slider:before {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        left: 3px;
+        bottom: 3px;
+        background: #fff;
+        border-radius: 50%;
+        transition: 0.3s;
+    }
+    .toggle input:checked + .slider { background: #2ec76e; }
+    .toggle input:checked + .slider:before { transform: translateX(18px); }
+
+    .field-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+    }
+    .field-row input, .field-row select {
+        width: auto;
+        min-width: 100px;
+        flex: 1;
+        padding: 8px 10px;
+        font-size: 0.85rem;
+    }
+    .field-row .btn-remove-field {
+        background: none;
+        border: none;
+        color: #ef4444;
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: 4px;
+    }
+
+    .empty-msg {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-dim);
+    }
+    .empty-msg i { font-size: 2rem; margin-bottom: 10px; display: block; }
+
+    /* Visual Regex Builder */
+    .regex-builder-area {
+        position: relative;
+        margin-bottom: 12px;
+    }
+    .regex-builder-area label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 0.8rem;
+        color: var(--text-dim);
+        font-weight: 500;
+    }
+    #al-example-msg {
+        width: 100%;
+        min-height: 60px;
+        padding: 12px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        color: var(--text-main);
+        font-size: 0.9rem;
+        resize: vertical;
+        line-height: 1.8;
+        font-family: inherit;
+        transition: border-color 0.3s;
+    }
+    #al-example-msg:focus {
+        outline: none;
+        border-color: rgba(255,204,0,0.4);
+    }
+    .regex-builder-hint {
+        font-size: 0.75rem;
+        color: var(--text-dim);
+        margin-top: 4px;
+        opacity: 0.7;
+    }
+    #regex-selector-popup {
+        display: none;
+        position: fixed;
+        z-index: 99999999;
+        background: #1a1a2e;
+        border: 1px solid rgba(255,204,0,0.3);
+        border-radius: 14px;
+        padding: 8px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        min-width: 200px;
+    }
+    #regex-selector-popup .popup-title {
+        font-size: 0.75rem;
+        color: var(--text-dim);
+        padding: 4px 10px 6px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        margin-bottom: 4px;
+    }
+    #regex-selector-popup .popup-title span {
+        color: var(--primary-color);
+        font-weight: 600;
+        font-family: monospace;
+        direction: ltr;
+    }
+    #regex-selector-popup .popup-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: right;
+        color: var(--text-main);
+        font-family: inherit;
+        font-size: 0.85rem;
+    }
+    #regex-selector-popup .popup-option:hover {
+        background: rgba(255,204,0,0.1);
+    }
+    #regex-selector-popup .popup-option .opt-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+    #regex-selector-popup .popup-option .opt-info {
+        flex: 1;
+    }
+    #regex-selector-popup .popup-option .opt-label {
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    #regex-selector-popup .popup-option .opt-preview {
+        font-size: 0.7rem;
+        color: var(--text-dim);
+        font-family: monospace;
+        direction: ltr;
+        margin-top: 2px;
+    }
+    .custom-select-wrap { position: relative; flex:1; min-width:120px; }
+    .custom-select-wrap input { width:100%; }
+    .custom-select-list {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        max-height: 180px;
+        overflow-y: auto;
+        background: var(--elmnt_back);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 8px;
+        z-index: 99999;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        margin-top: 4px;
+    }
+    .custom-select-list .cs-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 0.82rem;
+        color: var(--text-main);
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .custom-select-list .cs-item:last-child { border-bottom: none; }
+    .custom-select-list .cs-item:hover { background: rgba(255,204,0,0.08); color: var(--primary-color); }
+    .custom-select-list .cs-item.cs-empty { color: var(--text-dim); cursor: default; font-style: italic; }
+    .custom-select-list .cs-item.cs-empty:hover { background: transparent; color: var(--text-dim); }
+    #al-toast {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 12px 28px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: none;
+        z-index: 9999999;
+        background: #2ec76e;
+        color: #fff;
+        box-shadow: var(--shadow-toast);
+        animation: slideUp 0.3s ease;
+    }
+    #al-toast.error { background: #ef4444; }
+    @keyframes slideUp {
+        from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+    }
+    @media (max-width: 600px) {
+        .al-header { flex-direction: column; gap: 8px; text-align: center; }
+        .al-card .form-row { flex-direction: column; }
+        .rule-header { flex-direction: column; align-items: flex-start; }
+        .import-modal-content { max-height: 80vh !important; }
+    }
+
+    .import-overlay {
+        display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+        z-index: 100000; justify-content: center; align-items: center;
+    }
+    .import-overlay.active { display: flex; }
+    .import-modal-content {
+        background: var(--card-bg); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px; width: 90%; max-width: 560px; max-height: 75vh;
+        display: flex; flex-direction: column; overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .import-modal-header {
+        padding: 18px 20px 12px; border-bottom: 1px solid rgba(255,255,255,0.07);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .import-modal-header h3 { margin: 0; font-size: 1rem; }
+    .import-modal-body {
+        padding: 12px 20px; overflow-y: auto; flex: 1;
+    }
+    .import-rule-item {
+        display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+        border-radius: 10px; margin-bottom: 6px; cursor: pointer;
+        transition: background 0.15s;
+    }
+    .import-rule-item:hover { background: rgba(255,255,255,0.04); }
+    .import-rule-item.selected { background: rgba(59,130,246,0.1); }
+    .import-rule-item input[type="checkbox"] {
+        accent-color: var(--btn-color); width: 16px; height: 16px; cursor: pointer;
+    }
+    .import-rule-item .rule-name { flex: 1; font-size: 0.88rem; }
+    .import-rule-item .rule-type {
+        font-size: 0.7rem; padding: 2px 8px; border-radius: 6px;
+        background: rgba(255,255,255,0.06); color: var(--text-dim);
+    }
+    .import-modal-footer {
+        padding: 12px 20px 16px; border-top: 1px solid rgba(255,255,255,0.07);
+        display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;
+    }
+    .import-modal-footer .btn-sm {
+        padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+        font-size: 0.82rem; font-weight: 600;
+    }
+    .import-modal-footer .btn-select-all {
+        background: rgba(255,255,255,0.08); color: var(--text-main);
+    }
+    .import-modal-footer .btn-import {
+        background: var(--btn-color); color: #fff;
+    }
+    .import-modal-footer .btn-cancel {
+        background: rgba(255,255,255,0.06); color: var(--text-dim);
+    }
+</style>
+
+<div class="al-wrap">
+    <div class="al-header">
+        <h2><i class="fas fa-search"></i> <span data-i18n="analysis.title">تحليل الرسائل</span></h2>
+    </div>
+
+    <div class="tabs">
+        <button class="active" data-tab="test" onclick="al_switchTab('test')"><i class="fas fa-flask"></i> <span data-i18n="analysis.tab_test">تحليل رسالة</span></button>
+        <button data-tab="rules" onclick="al_switchTab('rules')"><i class="fas fa-cog"></i> <span data-i18n="analysis.tab_rules">قواعد التحليل</span></button>
+    </div>
+
+    <div id="al-test-section" class="al-section active">
+        <div class="al-card">
+            <h3><i class="fas fa-pen"></i> <span data-i18n="analysis.test_heading">اختبار رسالة</span></h3>
+            <div class="form-row">
+                <div class="form-group" style="flex:2">
+                    <label data-i18n="analysis.message_text">نص الرسالة</label>
+                    <textarea id="al-test-message" rows="3" data-i18n-placeholder="analysis.message_placeholder" placeholder="الصق نص الرسالة هنا..."></textarea>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label data-i18n="analysis.sender_header">هيدر المرسل (اختياري)</label>
+                    <input type="text" id="al-test-header" data-i18n-placeholder="analysis.sender_placeholder" placeholder="مثال: VF-Cash" dir="ltr">
+                </div>
+                <div class="form-group">
+                    <label>قاعدة محددة (اختياري)</label>
+                    <select id="al-test-rule">
+                        <option value="">كل القواعد المفعلة</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="al_testMessage()"><i class="fas fa-flask"></i> <span data-i18n="analysis.test_btn">تحليل</span></button>
+                <button class="btn-primary btn-outline" onclick="al_runAll()" id="al-runall-btn"><i class="fas fa-play"></i> تحليل كل الرسائل الموجودة</button>
+            </div>
+        </div>
+
+        <div id="al-test-results"></div>
+    </div>
+
+    <div id="al-rules-section" class="al-section">
+        <div class="al-card">
+            <h3><i class="fas fa-plus"></i> <span data-i18n="analysis.add_rule">إضافة قاعدة جديدة</span></h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label data-i18n="analysis.rule_name">اسم القاعدة</label>
+                    <input type="text" id="al-new-name" data-i18n-placeholder="analysis.rule_name_placeholder" placeholder="مثل: اورانج كاش - مدفوع وارد">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="analysis.rule_provider">مقدم الخدمة</label>
+                    <input type="text" id="al-new-provider" data-i18n-placeholder="analysis.rule_provider_placeholder" placeholder="مثل: orange">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="analysis.rule_header_pattern">هيدر المرسل (اختياري)</label>
+                    <input type="text" id="al-new-header" data-i18n-placeholder="analysis.rule_header_pattern_placeholder" placeholder="مثل: VF-Cash | Orange Money" dir="ltr" style="font-size:0.85rem;">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="analysis.rule_type">النوع</label>
+                    <select id="al-new-type">
+                        <option value="incoming" data-i18n="analysis.rule_type_incoming">مدفوع وارد (Incoming)</option>
+                        <option value="outgoing" data-i18n="analysis.rule_type_outgoing">تحويل صادر (Outgoing)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group" style="flex:2">
+                    <div class="regex-builder-area">
+                        <label><i class="fas fa-magic"></i> صق رسالة نموذج ثم حدد النص المتغير ليستبدله بـ Regex</label>
+                        <textarea id="al-example-msg" rows="4" dir="ltr" placeholder="مثال: تم استلام مبلغ 1,500.00 جنيه من رقم 01012345678 الحساب 123456&#10;حدد جزء ← اختر نوع ← يتحول للـ Regex مباشرة"></textarea>
+                        <div class="regex-builder-hint">تحديد ← اختيار نوع ← استبدال تلقائي في نفس المربع</div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group" style="flex:2">
+                    <label data-i18n="analysis.rule_description">الوصف</label>
+                    <input type="text" id="al-new-description" data-i18n-placeholder="analysis.rule_description_placeholder" placeholder="وصف مختصر للقاعدة">
+                </div>
+            </div>
+            <div style="margin-bottom:12px">
+                <label style="display:block;margin-bottom:8px;font-size:0.8rem;color:var(--text-dim);font-weight:500;" data-i18n="analysis.rule_fields">الحقول المستخلصة</label>
+                <div id="al-new-fields"></div>
+                <button class="btn-primary btn-sm" onclick="al_addField()"><i class="fas fa-plus"></i> <span data-i18n="analysis.add_field">إضافة حقل</span></button>
+            </div>
+            <button class="btn-primary" onclick="al_saveNewRule()"><i class="fas fa-save"></i> <span data-i18n="analysis.save_rule">حفظ القاعدة</span></button>
+        </div>
+
+        <div style="text-align:center;margin-bottom:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button class="btn-primary btn-outline" onclick="al_exportRules()"><i class="fas fa-file-export"></i> <span data-i18n="analysis.export_rules">تصدير القواعد</span></button>
+            <button class="btn-primary btn-outline" onclick="document.getElementById('al-import-file').click()"><i class="fas fa-file-import"></i> <span data-i18n="analysis.import_rules">استيراد القواعد</span></button>
+            <input type="file" id="al-import-file" accept=".smsr,.json" style="display:none;" onchange="al_importRules(this)">
+            <button class="btn-primary btn-outline btn-danger" onclick="al_deleteAllRules()"><i class="fas fa-trash"></i> <span data-i18n="analysis.delete_all_rules">حذف جميع القواعد</span></button>
+        </div>
+        <div id="al-rules-list"></div>
+    </div>
+</div>
+
+<div id="al-toast"></div>
+
+<div id="regex-selector-popup">
+    <div class="popup-title">النص المحدد: <span id="popup-selected-text"></span></div>
+    <button class="popup-option" onclick="al_selectVarType('number')">
+        <div class="opt-icon" style="background:rgba(59,130,246,0.15);color:#3b82f6;">#</div>
+        <div class="opt-info">
+            <div class="opt-label">رقم (Number)</div>
+            <div class="opt-preview">(\d+)</div>
+        </div>
+    </button>
+    <button class="popup-option" onclick="al_selectVarType('amount')">
+        <div class="opt-icon" style="background:rgba(34,197,94,0.15);color:#22c55e;">$</div>
+        <div class="opt-info">
+            <div class="opt-label">مبلغ (Amount)</div>
+            <div class="opt-preview">([\d,]+\.?\d*)</div>
+        </div>
+    </button>
+    <button class="popup-option" onclick="al_selectVarType('phone')">
+        <div class="opt-icon" style="background:rgba(168,85,247,0.15);color:#a855f7;">📱</div>
+        <div class="opt-info">
+            <div class="opt-label">رقم هاتف (Phone)</div>
+            <div class="opt-preview">(\d{11})</div>
+        </div>
+    </button>
+    <button class="popup-option" onclick="al_selectVarType('text')">
+        <div class="opt-icon" style="background:rgba(255,204,0,0.15);color:#ffcc00;">T</div>
+        <div class="opt-info">
+            <div class="opt-label">نص (Text)</div>
+            <div class="opt-preview">(.+?)</div>
+        </div>
+    </button>
+    <button class="popup-option" onclick="al_selectVarType('account')">
+        <div class="opt-icon" style="background:rgba(236,72,153,0.15);color:#ec4899;">🏦</div>
+        <div class="opt-info">
+            <div class="opt-label">رقم حساب (Account)</div>
+            <div class="opt-preview">(\d+)</div>
+        </div>
+    </button>
+    <button class="popup-option" onclick="al_cancelSelection()" style="justify-content:center;color:var(--text-dim);font-size:0.8rem;">
+        <i class="fas fa-times"></i> <span data-i18n="analysis.cancel">إلغاء</span>
+    </button>
+</div>
+
+<div class="import-overlay" id="import-rules-modal">
+    <div class="import-modal-content">
+        <div class="import-modal-header">
+            <h3><i class="fas fa-file-import"></i> <span data-i18n="analysis.import_rules">استيراد القواعد</span></h3>
+            <span id="import-count-label" style="font-size:0.8rem;color:var(--text-dim);"></span>
+        </div>
+        <div class="import-modal-body" id="import-rules-list"></div>
+        <div class="import-modal-footer">
+            <button class="btn-sm btn-select-all" onclick="al_importSelectAll()"><i class="fas fa-check-double"></i> <span data-i18n="analysis.import_select_all">تحديد الكل</span></button>
+            <button class="btn-sm btn-cancel" onclick="al_importCloseModal()" data-i18n="analysis.import_cancel">إلغاء</button>
+            <button class="btn-sm btn-import" onclick="al_importConfirm()"><i class="fas fa-file-import"></i> <span data-i18n="analysis.import_selected">استيراد المحدد</span></button>
+        </div>
+    </div>
+</div>
+
+<script src="/assets/js/i18n.js"></script>
+<script>
+    var al_editingId = null;
+
+    function al_showToast(msg, isError) {
+        var t = document.getElementById('al-toast');
+        t.textContent = msg;
+        t.className = isError ? 'error' : '';
+        t.style.display = 'block';
+        setTimeout(function () { t.style.display = 'none'; }, 3000);
+    }
+
+    function al_switchTab(tab) {
+        document.querySelectorAll('.tabs button').forEach(function (b) {
+            b.classList.toggle('active', b.dataset.tab === tab);
+        });
+        document.querySelectorAll('.al-section').forEach(function (s) {
+            s.classList.toggle('active', s.id === 'al-' + tab + '-section');
+        });
+        if (tab === 'rules') al_loadRules();
+        if (tab === 'test') al_loadRuleSelect();
+    }
+
+    // ===== قسم الاختبار =====
+    function al_loadRuleSelect() {
+        $.get('/api/analysis/rules', function (rules) {
+            var sel = document.getElementById('al-test-rule');
+            sel.innerHTML = '<option value="">كل القواعد المفعلة</option>';
+            rules.forEach(function (r) {
+                sel.innerHTML += '<option value="' + r.id + '">' + r.name + '</option>';
+            });
+        });
+    }
+
+    function al_testMessage() {
+        var message = document.getElementById('al-test-message').value.trim();
+        if (!message) { al_showToast('من فضلك أدخل نص الرسالة', true); return; }
+
+        var ruleId = document.getElementById('al-test-rule').value;
+        var header = document.getElementById('al-test-header').value.trim();
+        var url = '/api/analysis/test';
+        var body = { message: message };
+        if (header) body.header = header;
+        if (ruleId) body.rule_id = parseInt(ruleId);
+
+        $('#al-test-results').html('<div class="al-card" style="text-align:center;padding:30px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i><p style="margin-top:10px;color:var(--text-dim);">' + t('analysis.testing') + '</p></div>');
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(body),
+            success: function (data) {
+                al_renderResults(data.results);
+            },
+            error: function (xhr) {
+                var msg = 'فشل التحليل';
+                try { msg = JSON.parse(xhr.responseText).error; } catch(e) {}
+                $('#al-test-results').html('<div class="al-card" style="text-align:center;padding:20px;color:#ef4444;"><i class="fas fa-exclamation-circle" style="font-size:2rem;"></i><p style="margin-top:8px;">' + msg + '</p></div>');
+                al_showToast(msg, true);
+            }
+        });
+    }
+
+    function al_renderResults(results) {
+        var html = '';
+        results.forEach(function (r) {
+            if (r.matched) {
+                html += '<div class="result-box">';
+                html += '<h4><span style="color:#2ec76e;">✅</span> ' + r.rule_name + '</h4>';
+                html += '<table class="result-table">';
+                Object.keys(r.extracted).forEach(function (k) {
+                    var val = r.extracted[k];
+                    if (typeof val === 'number') val = val.toFixed(2);
+                    html += '<tr><td>' + k + '</td><td style="font-weight:600;">' + val + '</td></tr>';
+                });
+                html += '</table></div>';
+            } else {
+                html += '<div class="result-box mismatch">';
+                html += '<h4><span style="color:#ef4444;">❌</span> ' + r.rule_name + '</h4>';
+                if (r.error) html += '<p style="font-size:0.85rem;color:#ef4444;">خطأ: ' + r.error + '</p>';
+                else if (r.reason === 'header_mismatch') html += '<p style="font-size:0.85rem;color:#f59e0b;">هيدر المرسل لا يطابق</p>';
+                else if (r.reason === 'header_required') html += '<p style="font-size:0.85rem;color:#f59e0b;">هذه القاعدة تتطلب هيدر مرسل</p>';
+                else html += '<p style="font-size:0.85rem;color:var(--text-dim);">لم يتم التعرف على هذه الرسالة</p>';
+                html += '</div>';
+            }
+        });
+        if (!results.length) {
+            html = '<div class="al-card" style="text-align:center;"><p style="color:var(--text-dim);">' + t('analysis.no_rules') + '</p></div>';
+        }
+        $('#al-test-results').html(html);
+    }
+
+    // ===== قسم القواعد =====
+    function al_loadRules() {
+        $('#al-rules-list').html('<div class="al-card" style="text-align:center;padding:30px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i></div>');
+        $.get('/api/analysis/rules', function (rules) {
+            al_renderRules(rules);
+        }).fail(function () {
+            $('#al-rules-list').html('<div class="al-card" style="text-align:center;color:#ef4444;">' + (typeof t === 'function' ? t('analysis.error_load_rules') : 'Failed to load rules') + '</div>');
+        });
+    }
+
+    function al_renderRules(rules) {
+        var html = '';
+        if (!rules || rules.length === 0) {
+            html = '<div class="al-card"><div class="empty-msg"><i class="fas fa-inbox"></i> ' + t('analysis.no_rules') + '</div></div>';
+            $('#al-rules-list').html(html);
+            return;
+        }
+
+        var typeLabels = { incoming: '<span class="rule-badge badge-incoming">' + t('analysis.rule_type_incoming') + '</span>', outgoing: '<span class="rule-badge badge-outgoing">' + t('analysis.rule_type_outgoing') + '</span>' };
+
+        rules.forEach(function (r) {
+            var fields = r.field_mappings || [];
+            html += '<div class="rule-item" id="al-rule-' + r.id + '">';
+            html += '<div class="rule-header">';
+            html += '<div class="rule-name">';
+            html += '<label class="toggle" onclick="event.stopPropagation()">';
+            html += '<input type="checkbox" ' + (r.enabled ? 'checked' : '') + ' onchange="al_toggleRule(' + r.id + ', this.checked)">';
+            html += '<span class="slider"></span></label>';
+            html += r.name;
+            html += ' <span class="rule-badge badge-provider">' + (r.provider || 'عام') + '</span>';
+            if (r.header_pattern) html += ' <span class="rule-badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;font-family:monospace;direction:ltr;">' + r.header_pattern + '</span>';
+            html += ' ' + (typeLabels[r.type] || '');
+            html += (r.enabled ? '' : ' <span class="rule-badge badge-disabled">معطل</span>');
+            html += '</div>';
+            html += '<div style="font-size:0.8rem;color:var(--text-dim);">' + (r.description || '') + '</div>';
+            html += '</div>';
+            html += '<div class="rule-regex" dir="ltr">' + r.regex_pattern + '</div>';
+            html += '<div class="rule-fields">';
+            fields.forEach(function (f) {
+                html += '<span class="rule-field-tag">' + (f.label || f.name) + ' (' + f.type + ')</span>';
+            });
+            html += '</div>';
+            html += '<div class="rule-actions">';
+            html += '<button class="btn-primary btn-sm" onclick="al_editRule(' + r.id + ')"><i class="fas fa-edit"></i> ' + t('analysis.edit_rule') + '</button>';
+            html += '<button class="btn-primary btn-sm btn-danger" onclick="al_deleteRule(' + r.id + ')"><i class="fas fa-trash"></i> ' + t('analysis.delete_rule') + '</button>';
+            html += '</div>';
+            html += '</div>';
+        });
+
+        $('#al-rules-list').html(html);
+    }
+
+    function al_toggleRule(id, enabled) {
+        $.ajax({
+            url: '/api/analysis/rules/' + id,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ enabled: enabled }),
+            success: function () {
+                al_showToast(enabled ? '✅ ' + t('analysis.enable_rule') : '🔴 ' + t('analysis.disable_rule'));
+            },
+            error: function () { al_showToast('حدث خطأ', true); }
+        });
+    }
+
+    function al_deleteRule(id) {
+        if (!confirm('هل أنت متأكد من حذف هذه القاعدة؟')) return;
+        $.ajax({
+            url: '/api/analysis/rules/' + id,
+            type: 'DELETE',
+            success: function () {
+                al_showToast('✅ ' + t('analysis.toast_deleted'));
+                _csNamesCache = null;
+                al_loadRules();
+            },
+            error: function () { al_showToast('حدث خطأ في الحذف', true); }
+        });
+    }
+
+    function al_deleteAllRules() {
+        if (!confirm(t('analysis.toast_confirm_delete_all'))) return;
+        if (!confirm(t('analysis.toast_confirm_delete_all2'))) return;
+        $.ajax({
+            url: '/api/analysis/rules',
+            type: 'DELETE',
+            success: function (data) {
+                al_showToast('✅ ' + t('analysis.toast_all_deleted'));
+                _csNamesCache = null;
+                al_loadRules();
+            },
+            error: function () { al_showToast('حدث خطأ في الحذف', true); }
+        });
+    }
+
+    // ===== إضافة/تعديل القواعد =====
+    var al_fieldCount = 0;
+
+    function al_addField(name, type, label, group, pos, originalText) {
+        al_fieldCount++;
+        var idx = al_fieldCount;
+        var hasOriginal = originalText && originalText.trim().length > 0;
+        var nameVal = hasOriginal ? '' : (name || '');
+        var labelVal = hasOriginal ? '' : (label || '');
+        var namePlaceholder = hasOriginal ? originalText : t('analysis.field_name');
+        var labelPlaceholder = hasOriginal ? originalText : t('analysis.field_label');
+        var titleAttr = hasOriginal ? ' title="' + originalText.replace(/"/g, '&quot;') + '"' : '';
+        var html = '<div class="field-row" id="al-field-' + idx + '" data-pos="' + (pos !== undefined ? pos : 0) + '" data-type="' + (type || 'string') + '">';
+        html += '<div class="custom-select-wrap"><input type="text" placeholder="' + namePlaceholder + '"' + titleAttr + ' value="' + nameVal + '" style="min-width:120px;" id="al-f-name-' + idx + '" autocomplete="off"><div class="custom-select-list" id="al-cs-' + idx + '"></div></div>';
+        html += '<input type="text" placeholder="' + labelPlaceholder + '"' + titleAttr + ' value="' + labelVal + '" style="min-width:100px;" id="al-f-label-' + idx + '">';
+        html += '<button class="btn-remove-field" onclick="al_removeField(' + idx + ')"><i class="fas fa-times-circle"></i></button>';
+        html += '</div>';
+        $('#al-new-fields').append(html);
+    }
+
+    // ===== Custom Select for field names =====
+    var _csNamesCache = null;
+
+    function _csLoadNames(callback) {
+        if (_csNamesCache) { callback(_csNamesCache); return; }
+        $.get('/api/analysis/rules', function(rules) {
+            var names = {};
+            (rules || []).forEach(function(r) {
+                (r.field_mappings || []).forEach(function(f) {
+                    if (f.name && f.name.trim()) names[f.name.trim()] = true;
+                });
+            });
+            _csNamesCache = Object.keys(names).sort();
+            callback(_csNamesCache);
+        }).fail(function() { callback([]); });
+    }
+
+    function _csShow(input, listEl) {
+        var val = input.value.toLowerCase();
+        _csLoadNames(function(names) {
+            var filtered = names.filter(function(n) {
+                return !val || n.toLowerCase().indexOf(val) !== -1;
+            });
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<div class="cs-item cs-empty">لا توجد نتائج</div>';
+            } else {
+                listEl.innerHTML = filtered.map(function(n) {
+                    return '<div class="cs-item" data-val="' + n.replace(/"/g, '&quot;') + '">' + n + '</div>';
+                }).join('');
+            }
+            listEl.style.display = 'block';
+        });
+    }
+
+    function _csHide(listEl) {
+        setTimeout(function() { listEl.style.display = 'none'; }, 150);
+    }
+
+    $(document).on('focus', '.custom-select-wrap input', function() {
+        var listEl = $(this).siblings('.custom-select-list')[0];
+        if (listEl) _csShow(this, listEl);
+    });
+
+    $(document).on('input', '.custom-select-wrap input', function() {
+        var listEl = $(this).siblings('.custom-select-list')[0];
+        if (listEl && listEl.style.display === 'block') _csShow(this, listEl);
+    });
+
+    $(document).on('blur', '.custom-select-wrap input', function() {
+        var listEl = $(this).siblings('.custom-select-list')[0];
+        if (listEl) _csHide(listEl);
+    });
+
+    $(document).on('mousedown', '.custom-select-list .cs-item:not(.cs-empty)', function() {
+        var input = $(this).closest('.custom-select-wrap').find('input');
+        input.val($(this).attr('data-val')).trigger('change');
+    });
+
+    function al_removeField(idx) {
+        $('#al-field-' + idx).remove();
+    }
+
+    function al_getFields() {
+        var fields = [];
+        var groupNum = 0;
+        $('.field-row').each(function () {
+            groupNum++;
+            fields.push({
+                name: $(this).find('input[type="text"]').first().val().trim(),
+                type: $(this).attr('data-type') || 'string',
+                group: groupNum,
+                label: $(this).find('input[type="text"]').eq(1).val().trim()
+            });
+        });
+        return fields.filter(function (f) { return f.name; });
+    }
+
+    function al_saveNewRule() {
+        var name = document.getElementById('al-new-name').value.trim();
+        var pattern = document.getElementById('al-example-msg').value.trim();
+        if (!name) { al_showToast('من فضلك أدخل اسم القاعدة', true); return; }
+        if (!pattern) { al_showToast('من فضلك أدخل نمط Regex', true); return; }
+
+        var data = {
+            name: name,
+            description: document.getElementById('al-new-description').value.trim(),
+            provider: document.getElementById('al-new-provider').value.trim(),
+            header_pattern: document.getElementById('al-new-header').value.trim(),
+            type: document.getElementById('al-new-type').value,
+            regex_pattern: pattern,
+            field_mappings: al_getFields()
+        };
+
+        var url = al_editingId ? '/api/analysis/rules/' + al_editingId : '/api/analysis/rules';
+        var method = al_editingId ? 'PUT' : 'POST';
+
+        $.ajax({
+            url: url,
+            type: method,
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function () {
+                al_showToast('✅ ' + t('analysis.toast_saved'));
+                _csNamesCache = null;
+                al_resetForm();
+                al_loadRules();
+            },
+            error: function (xhr) {
+                var msg = 'حدث خطأ';
+                try { msg = JSON.parse(xhr.responseText).error; } catch(e) {}
+                al_showToast(msg, true);
+            }
+        });
+    }
+
+    function al_editRule(id) {
+        $.get('/api/analysis/rules', function (rules) {
+            var rule = rules.find(function (r) { return r.id === id; });
+            if (!rule) return;
+            al_editingId = id;
+            document.getElementById('al-new-name').value = rule.name;
+            document.getElementById('al-new-description').value = rule.description || '';
+            document.getElementById('al-new-provider').value = rule.provider || '';
+            document.getElementById('al-new-header').value = rule.header_pattern || '';
+            document.getElementById('al-new-type').value = rule.type || 'incoming';
+            document.getElementById('al-example-msg').value = rule.regex_pattern;
+
+            $('#al-new-fields').empty();
+            al_fieldCount = 0;
+            (rule.field_mappings || []).forEach(function (f) {
+                al_addField(f.name, f.type, f.label, f.group);
+            });
+
+            al_switchTab('rules');
+            window.scrollTo(0, 0);
+        });
+    }
+
+    function al_resetForm() {
+        al_editingId = null;
+        document.getElementById('al-new-name').value = '';
+        document.getElementById('al-new-description').value = '';
+        document.getElementById('al-new-provider').value = '';
+        document.getElementById('al-new-header').value = '';
+        document.getElementById('al-new-type').value = 'incoming';
+        document.getElementById('al-example-msg').value = '';
+        $('#al-new-fields').empty();
+        al_fieldCount = 0;
+        _rbFieldTypes = {};
+    }
+
+    // ===== تحليل كل الرسائل =====
+    function al_runAll() {
+        if (!confirm('سيتم تحليل كل الرسائل المخزنة في قاعدة البيانات بالقواعد المفعلة. هل تريد الاستمرار؟')) return;
+
+        var btn = document.getElementById('al-runall-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + t('analysis.testing');
+
+        $('#al-test-results').html('<div class="al-card" style="text-align:center;padding:30px;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i><p style="margin-top:10px;color:var(--text-dim);">' + t('analysis.testing') + '</p></div>');
+
+        $.ajax({
+            url: '/api/analysis/run-all',
+            type: 'POST',
+            contentType: 'application/json',
+            success: function (data) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i> ' + t('analysis.test_btn');
+                var msg = data.message || 'تم التحليل';
+                al_showToast('✅ ' + msg);
+                $('#al-test-results').html('<div class="result-box"><h4><span style="color:#2ec76e;">✅</span> ' + t('analysis.result_heading') + '</h4><table class="result-table"><tr><td>إجمالي الرسائل</td><td>' + data.total + '</td></tr><tr><td>تم تحليلها جديد</td><td>' + data.matched + '</td></tr><tr><td>محللة مسبقاً (تخطي)</td><td>' + data.skipped + '</td></tr></table></div>');
+            },
+            error: function (xhr) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i> ' + t('analysis.test_btn');
+                var msg = 'فشل التحليل الشامل';
+                try { msg = JSON.parse(xhr.responseText).error; } catch(e) {}
+                al_showToast('❌ ' + msg, true);
+                $('#al-test-results').html('<div class="al-card" style="text-align:center;padding:20px;color:#ef4444;"><i class="fas fa-exclamation-circle" style="font-size:2rem;"></i><p style="margin-top:8px;">' + msg + '</p></div>');
+            }
+        });
+    }
+
+    // ===== تصدير واستيراد القواعد =====
+    function _rbEncode(str) {
+        return btoa(unescape(encodeURIComponent(str))).split('').reverse().join('');
+    }
+    function _rbDecode(str) {
+        return decodeURIComponent(escape(atob(str.split('').reverse().join(''))));
+    }
+
+    function al_exportRules() {
+        $.get('/api/analysis/rules', function (rules) {
+            var clean = rules.map(function(r) {
+                return {
+                    name: r.name,
+                    description: r.description || '',
+                    provider: r.provider || '',
+                    header_pattern: r.header_pattern || '',
+                    type: r.type || 'incoming',
+                    regex_pattern: r.regex_pattern,
+                    field_mappings: r.field_mappings || [],
+                    enabled: r.enabled ? 1 : 0
+                };
+            });
+            var encoded = _rbEncode(JSON.stringify(clean, null, 2));
+            var blob = new Blob([encoded], { type: 'text/plain' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'sms-rules-' + new Date().toISOString().slice(0,10) + '.smsr';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            al_showToast('✅ تم تصدير ' + clean.length + ' قاعدة');
+        }).fail(function() { al_showToast('❌ فشل التصدير', true); });
+    }
+
+    function al_importRules(input) {
+        var file = input.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var decoded = _rbDecode(e.target.result);
+                var rules = JSON.parse(decoded);
+                if (!Array.isArray(rules) || rules.length === 0) {
+                    al_showToast('❌ ملف غير صالح', true);
+                    return;
+                }
+                _importedRules = rules;
+                var html = '';
+                rules.forEach(function(rule, i) {
+                    var typeName = rule.type === 'outgoing' ? t('analysis.rule_type_outgoing') : t('analysis.rule_type_incoming');
+                    html += '<label class="import-rule-item selected" data-idx="' + i + '">';
+                    html += '<input type="checkbox" checked>';
+                    html += '<span class="rule-name">' + (rule.name || 'قاعدة ' + (i+1)) + '</span>';
+                    html += '<span class="rule-type">' + typeName + '</span>';
+                    html += '</label>';
+                });
+                $('#import-rules-list').html(html);
+                al_importUpdateCount();
+                $('#import-rules-modal').addClass('active');
+            } catch (err) {
+                al_showToast('❌ فشل قراءة الملف', true);
+            }
+        };
+        reader.readAsText(file);
+        input.value = '';
+    }
+
+    var _importedRules = [];
+
+    function al_importSelectAll() {
+        var items = $('#import-rules-list .import-rule-item');
+        var allChecked = items.find('input[type="checkbox"]:not(:checked)').length === 0;
+        items.each(function() {
+            var cb = $(this).find('input[type="checkbox"]');
+            cb.prop('checked', !allChecked);
+            $(this).toggleClass('selected', !allChecked);
+        });
+        al_importUpdateCount();
+    }
+
+    function al_importCloseModal() {
+        $('#import-rules-modal').removeClass('active');
+        _importedRules = [];
+    }
+
+    function al_importUpdateCount() {
+        var total = $('#import-rules-list .import-rule-item').length;
+        var checked = $('#import-rules-list .import-rule-item input:checked').length;
+        $('#import-count-label').text(checked + ' / ' + total + ' ' + t('analysis.import_count'));
+    }
+
+    function al_importConfirm() {
+        var selected = [];
+        $('#import-rules-list .import-rule-item').each(function() {
+            if ($(this).find('input[type="checkbox"]').is(':checked')) {
+                selected.push(_importedRules[$(this).data('idx')]);
+            }
+        });
+        $('#import-rules-modal').removeClass('active');
+        if (selected.length === 0) { al_showToast('⚠️ لم يتم تحديد أي قاعدة', true); return; }
+        var added = 0, errors = 0, completed = 0, total = selected.length;
+        selected.forEach(function(rule) {
+            $.ajax({
+                url: '/api/analysis/rules',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(rule),
+                success: function() { added++; completed++; if (completed === total) al_importDone(added, errors, total); },
+                error: function() { errors++; completed++; if (completed === total) al_importDone(added, errors, total); }
+            });
+        });
+        _importedRules = [];
+    }
+
+    function al_importDone(added, errors, total) {
+        al_showToast(errors > 0 ? '⚠️ تم إضافة ' + added + ' قاعدة، فشل ' + errors : '✅ تم إضافة ' + added + ' قاعدة من أصل ' + total);
+        _csNamesCache = null;
+        al_loadRules();
+    }
+
+    // التهيئة
+    al_loadRuleSelect();
+
+    // ===== Visual Regex Builder =====
+    var _rbSelection = null;
+    var _rbFieldTypes = {}; // { '(' position: { type, label } }
+
+    var _rbTypeMap = {
+        number:  { regex: '(\\d+)',           label: 'رقم',     type: 'float' },
+        amount:  { regex: '([\\d,]+\\.?\\d*)', label: 'مبلغ',   type: 'float' },
+        phone:   { regex: '(\\d{11})',         label: 'هاتف',   type: 'string' },
+        text:    { regex: '(.+?)',             label: 'نص',     type: 'string' },
+        account: { regex: '(\\d+)',            label: 'حساب',   type: 'string' }
+    };
+
+    (function() {
+        var ta = document.getElementById('al-example-msg');
+        var popup = document.getElementById('regex-selector-popup');
+
+        ta.addEventListener('mouseup', function(e) {
+            var start = ta.selectionStart;
+            var end = ta.selectionEnd;
+            var sel = ta.value.substring(start, end).trim();
+            if (!sel || sel.length < 1) { popup.style.display = 'none'; return; }
+            _rbSelection = { start: start, end: end, text: sel };
+            document.getElementById('popup-selected-text').textContent = sel;
+            popup.style.display = 'block';
+            popup.style.top = Math.min(e.clientY + 5, window.innerHeight - 280) + 'px';
+            popup.style.left = Math.min(e.clientX + 5, window.innerWidth - 220) + 'px';
+        });
+
+        document.addEventListener('mousedown', function(e) {
+            if (!popup.contains(e.target) && e.target !== ta) {
+                popup.style.display = 'none';
+            }
+        });
+
+        // Sync fields on every textarea change (typing, paste, programmatic)
+        ta.addEventListener('input', function() {
+            al_syncFields();
+        });
+    })();
+
+    function al_selectVarType(type) {
+        if (!_rbSelection) return;
+        var info = _rbTypeMap[type];
+        var ta = document.getElementById('al-example-msg');
+        var start = _rbSelection.start;
+        var end = _rbSelection.end;
+        var before = ta.value.substring(0, start);
+        var after = ta.value.substring(end);
+
+        // Replace selected text directly with regex
+        ta.value = before + info.regex + after;
+
+        // Store type info keyed by the ( position in the new text
+        var parenPos = start; // the ( is inserted at `start`
+        var originalText = _rbSelection.text;
+        _rbFieldTypes[parenPos] = { type: info.type, label: info.label, originalText: originalText };
+
+        document.getElementById('regex-selector-popup').style.display = 'none';
+        _rbSelection = null;
+
+        // Rebuild fields from textarea content
+        al_syncFields();
+    }
+
+    function al_syncFields() {
+        var text = document.getElementById('al-example-msg').value;
+        var container = $('#al-new-fields');
+
+        // Find all ( positions
+        var groupPositions = [];
+        for (var i = 0; i < text.length; i++) {
+            if (text[i] === '(') {
+                groupPositions.push(i);
+            }
+        }
+        var groupCount = groupPositions.length;
+
+        // Get existing rows and their stored data-pos
+        var existingRows = container.children('.field-row').get();
+        var rowPosArr = [];
+        existingRows.forEach(function(el) {
+            rowPosArr.push({ el: el, pos: parseInt($(el).attr('data-pos')) || 0 });
+        });
+
+        // Greedy one-to-one matching: pair each row with closest ( position
+        var matchedRowIdx = {};
+        var matchedGroupIdx = {};
+        var pairs = [];
+        rowPosArr.forEach(function(row, ri) {
+            groupPositions.forEach(function(pos, gi) {
+                pairs.push({ ri: ri, gi: gi, dist: Math.abs(row.pos - pos) });
+            });
+        });
+        pairs.sort(function(a, b) { return a.dist - b.dist; });
+        pairs.forEach(function(p) {
+            if (matchedRowIdx[p.ri] || matchedGroupIdx[p.gi]) return;
+            if (p.dist > 12) return;
+            matchedRowIdx[p.ri] = true;
+            matchedGroupIdx[p.gi] = true;
+
+            // Carry type info from old position to new ( position
+            var oldPos = rowPosArr[p.ri].pos;
+            var newPos = groupPositions[p.gi];
+            if (oldPos !== newPos && _rbFieldTypes[oldPos]) {
+                _rbFieldTypes[newPos] = _rbFieldTypes[oldPos];
+                delete _rbFieldTypes[oldPos];
+            }
+            $(rowPosArr[p.ri].el).attr('data-pos', newPos);
+        });
+
+        // Remove unmatched rows
+        rowPosArr.forEach(function(row, ri) {
+            if (!matchedRowIdx[ri]) {
+                $(row.el).remove();
+            }
+        });
+
+        // Add rows for unmatched ( positions
+        var matchedCount = Object.keys(matchedRowIdx).length;
+        var newIdx = matchedCount;
+        groupPositions.forEach(function(pos, gi) {
+            if (!matchedGroupIdx[gi]) {
+                var typeInfo = _rbFieldTypes[pos] || { type: 'string', label: 'نص', originalText: '' };
+                newIdx++;
+                var fieldName = typeInfo.label + '_' + newIdx;
+                al_addField(fieldName, typeInfo.type, typeInfo.label + ' ' + newIdx, newIdx, pos, typeInfo.originalText);
+            }
+        });
+
+        // Reorder all rows by ( position
+        al_reorderFields();
+    }
+
+    function al_reorderFields() {
+        var container = $('#al-new-fields');
+        var rows = container.children('.field-row').get();
+        if (rows.length === 0) { _rbFieldTypes = {}; return; }
+
+        // Find all ( positions
+        var text = document.getElementById('al-example-msg').value;
+        var groupPositions = [];
+        for (var i = 0; i < text.length; i++) {
+            if (text[i] === '(') {
+                groupPositions.push(i);
+            }
+        }
+
+        // For each row, find closest ( position
+        rows.forEach(function(el) {
+            var curPos = parseInt($(el).attr('data-pos')) || 0;
+            var bestDist = Infinity;
+            var bestPos = curPos;
+            groupPositions.forEach(function(p) {
+                var d = Math.abs(p - curPos);
+                if (d < bestDist) { bestDist = d; bestPos = p; }
+            });
+            $(el).attr('data-pos', bestPos);
+        });
+
+        // Sort by position
+        rows.sort(function(a, b) {
+            return (parseInt($(a).attr('data-pos')) || 0) - (parseInt($(b).attr('data-pos')) || 0);
+        });
+        $.each(rows, function(i, el) { container.append(el); });
+
+        // Rebuild _rbFieldTypes by visual order
+        var newFieldTypes = {};
+        rows.forEach(function(el, i) {
+            var curPos = parseInt($(el).attr('data-pos')) || 0;
+            if (_rbFieldTypes[curPos]) {
+                newFieldTypes[curPos] = _rbFieldTypes[curPos];
+            } else {
+                var domType = $(el).attr('data-type') || 'string';
+                var domLabel = $('#al-f-label-' + id).val();
+                if (domLabel) {
+                    newFieldTypes[curPos] = { type: domType, label: domLabel.replace(/ \d+$/, '') };
+                } else {
+                    var placeholder = $('#al-f-label-' + id).attr('placeholder') || '';
+                    newFieldTypes[curPos] = { type: domType, label: placeholder.replace(/ \d+$/, ''), originalText: placeholder };
+                }
+            }
+        });
+        _rbFieldTypes = newFieldTypes;
+    }
+
+    function al_cancelSelection() {
+        document.getElementById('regex-selector-popup').style.display = 'none';
+        _rbSelection = null;
+    }
+</script>

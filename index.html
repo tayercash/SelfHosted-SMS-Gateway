@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en" class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
+  <script>(function () { var t = localStorage.getItem('theme') || 'dark'; document.documentElement.className = document.documentElement.className.replace(/\b(dark|light)\b/g, '').trim(); document.documentElement.classList.add(t); var l = localStorage.getItem('lang') || 'en'; document.documentElement.lang = l; document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr'; var f = document.getElementById('lang-flag'); if (f) f.src = l === 'ar' ? '/assets/icons/flag-ar.svg' : '/assets/icons/flag-en.svg'; })();</script>
+  <title>SMS Gateway</title>
+  <link rel="stylesheet" href="assets/fonts/noto-sans-arabic/font.css">
+  <link rel="stylesheet" href="assets/fonts/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/popup.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/navigation.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/toastify.css">
+  <link rel="stylesheet" href="assets/css/custom-select.css">
+  <link rel="stylesheet" href="assets/css/visa.css">
+  <link rel="stylesheet" href="assets/css/camera.css">
+  <link rel="stylesheet" href="assets/css/root.css">
+  <style>
+    .conn-field { margin-bottom: 12px; }
+    .conn-field label { display: block; font-size: .75rem; color: var(--text-dim); margin-bottom: 4px; font-weight: 600; }
+    .conn-field .value-wrap { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,.04); border: 1px solid var(--mou_border_color); border-radius: 10px; padding: 4px; }
+    .conn-field .value-wrap input { flex: 1; background: none; border: none; color: var(--primary-color); font-family: monospace; font-size: .85rem; padding: 8px 10px; outline: none; direction: ltr; text-align: left; }
+    .conn-field .copy-btn { background: rgba(255,204,0,.1); border: 1px solid rgba(255,204,0,.2); color: var(--primary-color); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: .75rem; white-space: nowrap; transition: all .2s; }
+    .conn-field .copy-btn:hover { background: rgba(255,204,0,.2); }
+    .conn-field .copy-btn.copied { background: rgba(46,199,110,.2); border-color: #2ec76e; color: #2ec76e; }
+  </style>
+
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+  <div class="mou_background"></div>
+  <div class="full_app_loader"></div>
+
+  <div class="mou_popup mou_bottom_pop" id="counter_data_popup">
+    <div class="mou_popup_container mou_box_shadow">
+      <div class="mou_popup_header">
+        <span class="mou_pop_up_title"><span class="popup_counter_total"></span></span>
+        <span class="close_popup_btn" data-dismisspopup><i class="far fa-times fa-lg"></i></span>
+      </div>
+      <div class="mou_popup_body">
+
+      </div>
+    </div>
+  </div>
+
+  <div class="mou_popup" id="dl-apk-popup">
+    <div class="mou_popup_container mou_box_shadow">
+      <div class="mou_popup_header">
+        <span class="mou_pop_up_title" data-i18n="download.title">تحميل وإعداد التطبيق</span>
+        <span class="close_popup_btn" data-dismisspopup><i class="far fa-times fa-lg"></i></span>
+      </div>
+      <div class="mou_popup_body" style="padding:24px;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <i class="fab fa-android" style="font-size:2.5rem;color:#3ddc84;"></i>
+        </div>
+        <p style="color:#ccc;font-size:.85rem;margin-bottom:16px;text-align:center;" data-i18n="download.qr_hint">امسح الرمز للتحميل على هاتفك</p>
+        <div id="dl-apk-qr" style="display:flex;justify-content:center;margin-bottom:12px;"></div>
+        <p id="dl-apk-url" style="color:#888;font-size:.75rem;word-break:break-all;direction:ltr;font-family:monospace;margin-bottom:16px;text-align:center;"></p>
+        <div style="text-align:center;margin-bottom:24px;">
+          <a id="dl-apk-link" href="/download" target="_blank"
+            style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:10px;background:linear-gradient(135deg,#ffcc00,#ff9900);color:#000;font-weight:700;font-size:.85rem;text-decoration:none;transition:all .2s;">
+            <i class="fas fa-external-link-alt"></i>
+            <span data-i18n="download.open_page">فتح صفحة التحميل</span>
+          </a>
+        </div>
+
+        <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:20px;">
+          <h3 style="margin:0 0 6px 0;color:var(--primary-color);font-size:1rem;display:flex;align-items:center;gap:8px;">
+            <i class="fas fa-plug"></i> <span data-i18n="modems.setup_heading">بيانات الاتصال</span>
+          </h3>
+          <p style="color:var(--text-dim);font-size:.8rem;margin:0 0 16px 0;" data-i18n="modems.setup_desc">استخدم هذه المعلومات لتوصيل تطبيق الهاتف (Android) بالسيرفر</p>
+          <div class="conn-field">
+            <label data-i18n="modems.server_link">🔗 رابط الخادم (HTTP)</label>
+            <div class="value-wrap">
+              <input type="text" id="dl-apk-connHttpUrl" readonly onclick="this.select()">
+              <button class="copy-btn" onclick="dlCopyField('dl-apk-connHttpUrl', this)" data-i18n="modems.copy_btn">نسخ</button>
+            </div>
+          </div>
+          <div class="conn-field" id="dl-apk-connOnlineWrap">
+            <label>🌐 رابط المشروع اونلاين</label>
+            <div class="value-wrap">
+              <input type="text" id="dl-apk-connOnlineUrl" readonly onclick="this.select()">
+              <button class="copy-btn" onclick="dlCopyField('dl-apk-connOnlineUrl', this)" data-i18n="modems.copy_btn">نسخ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <header class="app-header">
+    <div class="header-left">
+      <button id="sidebar-toggle-btn" class="icon-btn"
+        style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #fff; display: flex; align-items: center; justify-content: center; width: 35px; height: 35px; border-radius: 50%; transition: background 0.3s;">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div id="connection-status" class="status-badge">
+        <span class="status-dot"></span>
+        <span class="status-text">Connecting</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button id="dl-apk-btn" class="icon-btn" data-openpopup="dl-apk-popup"
+        style="background: none; border: none; font-size: 1.15rem; cursor: pointer; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.3s; color: #3ddc84;">
+        <i class="fab fa-android"></i>
+      </button>
+      <button id="lang-toggle-btn" class="icon-btn"
+        onclick="window.i18n && window.i18n.setLang(window.i18n.getLang() === 'en' ? 'ar' : 'en')"
+        style="background: none; border: none; cursor: pointer; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.3s; overflow: hidden; padding: 0;">
+        <img id="lang-flag" src="/assets/icons/flag-en.svg" alt="lang"
+          style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+      </button>
+      <button id="theme-toggle-btn" class="icon-btn theme-btn"
+        style="background: none; border: none; font-size: 1.1rem; cursor: pointer; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.3s; color: #f39c12;">
+        <i class="fas fa-sun"></i>
+      </button>
+      <div class="user-info">
+        <span id="display-username">Admin</span>
+        <div class="user-avatar">A</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="full_view">
+    <div class="full_view_container" id="content">
+      <div id="header_actions" style="display:none"></div>
+    </div>
+  </div>
+
+
+
+  <div id="app-sidebar" class="sidebar-drawer">
+    <div class="sidebar-backdrop"></div>
+    <div class="sidebar-content">
+      <div class="sidebar-header">
+        <div class="app-logo" style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.5rem;">📡</span>
+          <span class="logo-text" style="font-weight: bold; font-size: 1.2rem;">SMS Gateway</span>
+        </div>
+        <button id="sidebar-close-btn" class="close-btn"
+          style="background: none; border: none; color: #888; font-size: 1.2rem; cursor: pointer; transition: color 0.3s;"><i
+            class="fas fa-times"></i></button>
+      </div>
+
+      <div class="sidebar-user-section">
+        <div class="sidebar-avatar">A</div>
+        <div class="sidebar-user-info">
+          <span class="username" style="font-weight: bold; color: #fff; font-size: 1rem;"
+            id="sidebar-username">Admin</span>
+          <span class="role-badge" id="sidebar-role-badge">Admin</span>
+        </div>
+      </div>
+
+      <div class="sidebar-menu">
+        <a href="#" class="menu-item active" data-full_iframe_target_url="assets/phone.html">
+          <i class="fas fa-phone-alt"></i>
+          <span data-i18n="nav.devices">الإتصال</span>
+        </a>
+        <a href="#" class="menu-item" data-full_iframe_target_url="assets/messages.html">
+          <i class="fas fa-comment"></i>
+          <span data-i18n="nav.messages">الرسائل</span>
+        </a>
+        <a href="#" class="menu-item d-none" id="sidebar-all-transactions-btn"
+          data-full_iframe_target_url="assets/all-transactions.html">
+          <i class="fas fa-list"></i>
+          <span data-i18n="nav.transactions">كل المعاملات</span>
+        </a>
+        <a href="#" class="menu-item" id="sidebar-wallets-btn" data-full_iframe_target_url="wallets">
+          <i class="fas fa-wallet"></i>
+          <span data-i18n="nav.wallets">المحافظ</span>
+        </a>
+
+        <a href="#" class="menu-item" id="sidebar-merchants-btn" data-full_iframe_target_url="merchants">
+          <i class="fas fa-store"></i>
+          <span data-i18n="nav.merchants">التجار</span>
+        </a>
+
+
+        <a href="#" class="menu-item d-none" id="sidebar-modems-btn" data-full_iframe_target_url="assets/modems.html">
+          <i class="fas fa-microchip"></i>
+          <span data-i18n="nav.modems">الشرائح والمودم</span>
+        </a>
+        <a href="#" class="menu-item d-none" id="sidebar-etisalat-btn"
+          data-full_iframe_target_url="assets/transfer-settings.html">
+          <i class="fas fa-cog"></i>
+          <span data-i18n="nav.transfer_settings">إعدادات التحويل</span>
+        </a>
+        <a href="#" class="menu-item d-none" id="sidebar-analysis-btn"
+          data-full_iframe_target_url="assets/analysis.html">
+          <i class="fas fa-search"></i>
+          <span data-i18n="nav.analyzer">تحليل الرسائل</span>
+        </a>
+        <a href="#" class="menu-item d-none" id="sidebar-noip-btn" data-full_iframe_target_url="assets/noip.html">
+          <i class="fas fa-globe"></i>
+          <span data-i18n="nav.noip2">إعدادات No-IP</span>
+        </a>
+
+        <a href="#" class="menu-item d-none" id="sidebar-admin-btn" data-full_iframe_target_url="admin-page">
+          <i class="fas fa-user-tie "></i>
+          <span data-i18n="admin.title">إدارة المستخدمين</span>
+        </a>
+
+
+      </div>
+
+      <div class="sidebar-footer">
+        <button onclick="logout()" class="sidebar-logout-btn">
+          <i class="fas fa-sign-out-alt"></i>
+          <span data-i18n="nav.logout">تسجيل الخروج</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/js/i18n.js"></script>
+  <script src="assets/js/jquery.min.js"></script>
+  <script src="assets/js/jquery-ui.min.js"></script>
+  <script src="assets/js/custom-select.js"></script>
+  <script src="assets/js/popup.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/toastify.js"></script>
+  <script src="assets/js/browserfingerprint.js"></script>
+  <script src="assets/js/socket_connector.js"></script>
+  <script src="assets/js/index.js"></script>
+  <script>
+  function dlCopyField(id, btn) {
+    var input = document.getElementById(id);
+    if (!input) return;
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).then(function() {
+      btn.textContent = t('modems.copied');
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = t('modems.copy_btn'); btn.classList.remove('copied'); }, 2000);
+    }).catch(function() {
+      document.execCommand('copy');
+      btn.textContent = t('modems.copied');
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = t('modems.copy_btn'); btn.classList.remove('copied'); }, 2000);
+    });
+  }
+  (function(){
+    function _dlLoadConnInfo(){
+      fetch('/api/server-info').then(function(r){return r.json()}).then(function(data){
+        var localIP = data.localIP || '127.0.0.1';
+        var port = data.httpsPort || 29001;
+        document.getElementById('dl-apk-connHttpUrl').value = 'https://' + localIP + ':' + port;
+        var onlineWrap = document.getElementById('dl-apk-connOnlineWrap');
+        if (data.noipDomain) {
+          onlineWrap.style.display = '';
+          document.getElementById('dl-apk-connOnlineUrl').value = 'https://' + data.noipDomain + ':' + port;
+        } else {
+          onlineWrap.style.display = 'none';
+        }
+      }).catch(function(){
+        document.getElementById('dl-apk-connHttpUrl').value = 'https://127.0.0.1:29001';
+        document.getElementById('dl-apk-connOnlineWrap').style.display = 'none';
+      });
+    }
+    function _dlRenderQR(){
+      var el=document.getElementById('dl-apk-qr');
+      if(!el)return;
+      el.innerHTML='';
+      fetch('/local-ip').then(function(r){return r.json()}).then(function(d){
+        var url='https://'+d.ip+':'+d.port+'/download';
+        document.getElementById('dl-apk-url').textContent=url;
+        document.getElementById('dl-apk-link').href=url;
+        try{new QRCode(el,{text:url,width:160,height:160,colorDark:'#1a1a24',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}
+      }).catch(function(){
+        var url=location.origin+'/download';
+        document.getElementById('dl-apk-url').textContent=url;
+        document.getElementById('dl-apk-link').href=url;
+        try{new QRCode(el,{text:url,width:160,height:160,colorDark:'#1a1a24',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}
+      });
+    }
+    $(document).on('click','#dl-apk-btn',function(){
+      _dlLoadConnInfo();
+      if(typeof QRCode!=='undefined'){_dlRenderQR();}else{
+        var s=document.createElement('script');
+        s.src='/assets/js/qrcode.min.js';
+        s.onload=function(){setTimeout(_dlRenderQR,50);};
+        document.head.appendChild(s);
+      }
+    });
+  })();
+  </script>
+</body>
+
+</html>

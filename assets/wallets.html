@@ -1,0 +1,432 @@
+<link rel="stylesheet" href="assets/css/visa.css">
+
+<div class="page-wrap">
+<div class="header">
+    <span class="total_balance_container">
+        <span id="wallets_total_balance">$0.00</span>
+    </span>
+    <div class="header-tools">
+        <select class="visa_filter" name="wallets_filter" id="wallets_filter">
+            <option value="all" data-i18n="wallets.filter_all">الكل</option>
+            <option value="active_balance" data-i18n="wallets.filter_has_balance">له رصيد</option>
+        </select>
+        <div class="actions">
+            <div class="main-actions-group">
+                <button class="add_wallet_btn" data-i18n-title="wallets.add_wallet" title="إضافة محفظة"><i class="fas fa-plus"></i></button>
+                <button class="search_btn" id="wallets_search_btn" data-i18n-title="wallets.search" title="بحث"><i class="fas fa-search"></i></button>
+            </div>
+            <div class="sort-dropdown">
+                <button class="sort_btn" id="wallets_sort_btn" data-i18n-title="wallets.change_order" title="تغيير اتجاه الترتيب">
+                    <i class="fas fa-sort-amount-down"></i>
+                </button>
+                <select id="wallets_sort_criteria">
+                    <option value=".wallet_balance" data-i18n="wallets.sort_balance">الرصيد</option>
+                    <option value=".wallet_monthly_limit" data-i18n="wallets.sort_monthly">الحد الشهري</option>
+                    <option value=".wallet_daily_limit" data-i18n="wallets.sort_daily">الحد اليومي</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="search_container" id="wallets_search_container" style="display: none;">
+    <div class="search-wrapper" style="display: flex; gap: 10px; align-items: center;">
+        <input type="text" id="wallets_search_input" data-i18n-placeholder="wallets.search_placeholder" placeholder="ابحث برقم المحفظة أو الاسم..." class="form-control">
+        <button id="wallets_close_search" class="btn-secondary" style="border:none; background:transparent; cursor:pointer;">✖</button>
+    </div>
+</div>
+
+<div class="cards-container" id="wallets_container"></div>
+
+<input type="file" id="wallets_excel_input" accept=".xlsx,.xls,.csv" style="display:none;" />
+
+<!-- Add/Edit Wallet Popup -->
+<div class="mou_popup mou_bottom_pop" id="wallets_data_popup">
+    <div class="mou_popup_container mou_box_shadow" style="max-width: 900px; width: 95%;">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" data-i18n="wallets.wallet_info">بيانات المحفظة</span>
+            <span class="close_popup" data-closepopup="wallets_data_popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <form id="wallets_data_form">
+                <input type="hidden" name="id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="wallets.wallet_name">اسم المحفظة</label>
+                        <input type="text" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="wallets.operation_type">مزود الخدمة</label>
+                        <select name="walletProvider" required>
+                            <option value="" data-i18n="wallets.choose_type">اختر المزود</option>
+                            <option value="Axis">Axis</option>
+                            <option value="Etisalat">Etisalat</option>
+                            <option value="Vodafone">Vodafone</option>
+                            <option value="We">We</option>
+                            <option value="Orange">Orange</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="wallets.wallet_number">رقم المحفظة</label>
+                        <input type="text" name="WalletNum">
+                    </div>
+                    <div class="form-group"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="wallets.monthly_limit">الحد الشهري</label>
+                        <input type="number" name="Monthly_limit" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="wallets.daily_limit">الحد اليومي</label>
+                        <input type="number" name="daily_limit" step="1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="wallets.balance">الرصيد</label>
+                        <input type="number" name="balance" id="wallet_balance_input" step="0.01" style="width: 100%;">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="wallets.price">التاجر (اختياري)</label>
+                        <select name="merchant_id" id="wallet_merchant_select" class="form-control" style="width: 100%;">
+                            <option value="" data-i18n="wallets.no_price">بدون تاجر</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="wallets.notes">ملاحظات</label>
+                        <textarea name="note" style="width: 100%;"></textarea>
+                    </div>
+                    <div class="form-group"></div>
+                </div>
+                <div class="form-row" style="justify-content: center;">
+                    <div class="form-group" style="flex: 0 0 auto; min-width: 200px;">
+                        <button type="submit" class="btn-primary" style="width: 100%;" data-i18n="wallets.save">حفظ</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Wallet Popup -->
+<div class="mou_popup mou_bottom_pop" id="at-del-wallet-popup">
+    <div class="mou_popup_container mou_box_shadow">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" data-i18n="wallets.delete_wallet">حذف المحفظة</span>
+            <span class="close_popup" data-closepopup="at-del-wallet-popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <div style="margin-bottom:16px;text-align:center;">
+                <i class="fas fa-trash" style="font-size:2rem;color:#ef4444;margin-bottom:8px;"></i>
+                <p style="font-size:0.95rem;color:var(--text);margin-bottom:4px;" data-i18n="wallets.delete_confirm_msg">هل تريد حذف المحفظة؟</p>
+                <strong id="at-del-wallet-name" style="color:#ffcc00;font-size:1rem;"></strong>
+            </div>
+            <input type="hidden" id="at-del-wallet-id">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <button onclick="at_doDeleteWallet('soft')" style="width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;font-weight:700;cursor:pointer;font-size:0.95rem;">
+                    <i class="fas fa-eye-slash"></i> <span data-i18n="wallets.delete_soft">إخفاء المحفظة فقط</span>
+                </button>
+                <button onclick="at_doDeleteWallet('hard')" style="width:100%;padding:12px;border:none;border-radius:10px;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);font-weight:700;cursor:pointer;font-size:0.95rem;">
+                    <i class="fas fa-trash"></i> <span data-i18n="wallets.delete_hard">حذف المحفظة وكل العمليات</span>
+                </button>
+            </div>
+            <div id="at-del-wallet-result" style="font-size:0.85rem;margin-top:10px;text-align:center;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Transaction Confirm Popup -->
+<div class="mou_popup mou_bottom_pop" id="del-tx-confirm-popup">
+    <div class="mou_popup_container mou_box_shadow" style="max-width:400px;">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" data-i18n="wallets.confirm_delete_title">تأكيد الحذف</span>
+            <span class="close_popup" data-closepopup="del-tx-confirm-popup"></span>
+        </div>
+        <div class="mou_popup_body" style="text-align:center;">
+            <div style="margin-bottom:16px;">
+                <i class="fas fa-exclamation-triangle" style="font-size:2.2rem;color:#f59e0b;margin-bottom:10px;"></i>
+                <p style="font-size:0.95rem;color:var(--text);" data-i18n="wallets.confirm_delete_tx_msg">هل تريد حذف هذه العملية؟ سيتم عكس تأثيرها على الرصيد.</p>
+            </div>
+            <input type="hidden" id="del-tx-id">
+            <div style="display:flex;gap:10px;">
+                <button id="del-tx-confirm-yes" style="flex:1;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-weight:700;cursor:pointer;font-size:0.9rem;">
+                    <i class="fas fa-trash"></i> <span data-i18n="common.delete">حذف</span>
+                </button>
+                <button onclick="$('#del-tx-confirm-popup').closepopup()" style="flex:1;padding:12px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.05);color:var(--text-dim);font-weight:600;cursor:pointer;font-size:0.9rem;">
+                    <span data-i18n="common.cancel">إلغاء</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transactions Popup -->
+<div class="mou_popup mou_bottom_pop" id="wallets_transaction_popup">
+    <div class="mou_popup_container mou_box_shadow">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" data-i18n="wallets.pay_transfer">عملية دفع / تحويل</span>
+            <span class="close_popup" data-closepopup="wallets_transaction_popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <form id="wallets_transaction_form">
+                <input type="hidden" name="card_id">
+                <div class="form-group">
+                    <label data-i18n="wallets.amount">المبلغ</label>
+                    <input type="number" name="price" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="wallets.notes">ملاحظات</label>
+                    <textarea name="note"></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="width:100%; padding:14px;" data-i18n="wallets.pay">دفع</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Balance Popup -->
+<div class="mou_popup mou_bottom_pop" id="wallets_balance_popup">
+    <div class="mou_popup_container mou_box_shadow">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" data-i18n="wallets.add_balance">إضافة رصيد</span>
+            <span class="close_popup" data-closepopup="wallets_balance_popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <form id="wallets_balance_form">
+                <input type="hidden" name="card_id">
+                <div class="form-group">
+                    <label data-i18n="wallets.deposit_amount">المبلغ</label>
+                    <input type="number" name="amount" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="wallets.notes">ملاحظات</label>
+                    <textarea name="note"></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="width:100%; padding:14px;" data-i18n="common.add">إضافة</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Operations Popup -->
+<div class="mou_popup mou_bottom_pop" id="wallets_transactions_popup">
+    <div class="mou_popup_container mou_box_shadow">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" data-i18n="wallets.operations">العمليات</span>
+            <span class="close_popup" data-closepopup="wallets_transactions_popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <div class="transactions-container" id="wallets_transactions_list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Merchant Details from Wallet Popup -->
+<div class="mou_popup mou_bottom_pop" id="merchant_details_from_wallet_popup">
+    <div class="mou_popup_container mou_box_shadow">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" data-i18n="merchants.wallet_info">تفاصيل التاجر</span>
+            <span class="close_popup" data-closepopup="merchant_details_from_wallet_popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <div id="merchant_summary_card_container"></div>
+            <div style="margin-top: 20px;">
+                <h4 style="margin-bottom: 10px;" data-i18n="wallets.recent_operations">آخر العمليات</h4>
+                <div class="transactions-container" id="merchant_transactions_from_wallet_list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change Merchant Popup -->
+<div class="mou_popup mou_bottom_pop" id="change_wallet_merchant_popup">
+    <div class="mou_popup_container mou_box_shadow">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" data-i18n="wallets.change_price">تغيير التاجر</span>
+            <span class="close_popup" data-closepopup="change_wallet_merchant_popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <form id="change_wallet_merchant_form">
+                <input type="hidden" name="wallet_id">
+                <input type="hidden" name="merchant_id" id="selected_merchant_id_input">
+                <div class="form-group">
+                    <label data-i18n="wallets.choose_type">اختر التاجر</label>
+                    <div id="quick_merchants_list" class="merchants-selection-list"></div>
+                </div>
+                <button type="submit" class="btn-primary" style="width:100%; padding:14px; margin-top:15px;" data-i18n="wallets.save">تحديث التاجر</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Merchant Popup -->
+<div class="mou_popup mou_bottom_pop" id="merchants_data_popup">
+    <div class="mou_popup_container mou_box_shadow">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" data-i18n="wallets.wallet_info">بيانات التاجر</span>
+            <span class="close_popup" data-closepopup="merchants_data_popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <form id="merchants_data_form">
+                <input type="hidden" name="id">
+                <div class="form-group">
+                    <label data-i18n="wallets.wallet_name">اسم التاجر</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group" id="merchant_balance_input_group">
+                    <label data-i18n="wallets.balance">الرصيد الابتدائي</label>
+                    <input type="number" name="balance" step="0.01" value="0">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="wallets.notes">ملاحظات</label>
+                    <textarea name="note"></textarea>
+                </div>
+                <button type="submit" class="btn-primary" data-i18n="wallets.save">حفظ التاجر</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Merchant Balance Popup -->
+<div class="mou_popup mou_bottom_pop" id="merchants_balance_popup">
+    <div class="mou_popup_container mou_box_shadow">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" data-i18n="wallets.edit_balance">تعديل رصيد التاجر</span>
+            <span class="close_popup" data-closepopup="merchants_balance_popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <div id="merchant_balance_info" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 8px;" id="merchant_balance_name"></div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                    <span data-i18n="wallets.total_balance">إجمالي الرصيد: <strong id="merchant_info_total" style="color: #fff;">$0.00</strong></span>
+                    <span data-i18n="wallets.net_balance">صافي الرصيد: <strong id="merchant_info_net" style="color: #00ffcc;">$0.00</strong></span>
+                </div>
+            </div>
+            <form id="merchants_balance_form" style="display: none;">
+                <input type="hidden" name="merchant_id">
+            </form>
+            <div style="display: flex; gap: 15px; margin-top: 10px;">
+                <button type="button" id="merchant_open_deposit" class="btn-primary" style="background: #28a745; flex: 1; padding: 18px; font-size: 1.1rem;">
+                    <i class="fas fa-plus-circle"></i> <span data-i18n="wallets.deposit">إيداع</span>
+                </button>
+                <button type="button" id="merchant_open_withdraw" class="btn-primary" style="background: #dc3545; flex: 1; padding: 18px; font-size: 1.1rem;">
+                    <i class="fas fa-minus-circle"></i> <span data-i18n="wallets.deduct_tab">سحب</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Merchant Deposit Popup -->
+<div class="mou_popup mou_bottom_pop" id="merchants_deposit_popup">
+    <div class="mou_popup_container mou_box_shadow">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" style="color: #28a745;" data-i18n="merchants.deposit_balance">إيداع رصيد التاجر</span>
+            <span class="close_popup" data-closepopup="merchants_deposit_popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 8px;" id="deposit_merchant_name"></div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                    <span data-i18n="wallets.total_balance">إجمالي الرصيد: <strong id="deposit_info_total" style="color: #fff;">$0.00</strong></span>
+                    <span data-i18n="wallets.net_balance">صافي الرصيد: <strong id="deposit_info_net" style="color: #00ffcc;">$0.00</strong></span>
+                </div>
+            </div>
+            <form id="merchants_deposit_form">
+                <input type="hidden" name="merchant_id">
+                <div class="form-group">
+                    <label data-i18n="wallets.deposit_amount">مبلغ الإيداع</label>
+                    <input type="number" name="deposit_amount" step="0.01" required data-i18n-placeholder="wallets.deposit_amount" placeholder="أدخل مبلغ الإيداع">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="wallets.notes">ملاحظات</label>
+                    <textarea name="deposit_note" data-i18n-placeholder="wallets.notes_placeholder" placeholder="ملاحظات الإيداع"></textarea>
+                </div>
+                <button type="button" id="merchant_deposit_btn" class="btn-primary" style="background: #28a745; width: 100%; padding: 14px;" data-i18n="wallets.confirm_deposit">تأكيد الإيداع</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Deposit Popup -->
+<div class="mou_popup mou_bottom_pop" id="merchants_deposit_confirm_popup">
+    <div class="mou_popup_container mou_box_shadow">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" style="color: #28a745;" data-i18n="wallets.confirm_deposit">تأكيد الإيداع</span>
+            <span class="close_popup" data-closepopup="merchants_deposit_confirm_popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 8px;" id="confirm_deposit_merchant_name"></div>
+            </div>
+            <div style="background: rgba(40,167,69,0.1); border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                    <span data-i18n="wallets.deposit_amount">مبلغ الإيداع</span>
+                    <span id="confirm_deposit_amount" style="color: #28a745; font-weight: bold;">$0.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-top: 5px;">
+                    <span data-i18n="wallets.notes">ملاحظات</span>
+                    <span id="confirm_deposit_note" style="color: #ccc;">-</span>
+                </div>
+            </div>
+            <button type="button" id="confirm_deposit_yes" class="btn-primary" style="background: #28a745; width: 100%; padding: 14px;" data-i18n="wallets.confirm_deposit">تأكيد الإيداع</button>
+        </div>
+    </div>
+</div>
+
+<!-- Merchant Withdraw Popup -->
+<div class="mou_popup mou_bottom_pop" id="merchants_withdraw_popup">
+    <div class="mou_popup_container mou_box_shadow">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" style="color: #dc3545;" data-i18n="merchants.deduct_balance">سحب رصيد التاجر</span>
+            <span class="close_popup" data-closepopup="merchants_withdraw_popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 8px;" id="withdraw_merchant_name"></div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                    <span data-i18n="wallets.total_balance">إجمالي الرصيد: <strong id="withdraw_info_total" style="color: #fff;">$0.00</strong></span>
+                    <span data-i18n="wallets.net_balance">صافي الرصيد: <strong id="withdraw_info_net" style="color: #00ffcc;">$0.00</strong></span>
+                </div>
+            </div>
+            <form id="merchants_withdraw_form">
+                <input type="hidden" name="merchant_id">
+                <div class="form-group">
+                    <label data-i18n="wallets.deduct_amount">المبلغ المطلوب من صافي الرصيد</label>
+                    <input type="number" name="net_amount" id="merchant_net_amount" step="0.01" required data-i18n-placeholder="wallets.deduct_amount" placeholder="أدخل المبلغ من الصافي">
+                </div>
+                <div id="merchant_withdraw_calc" style="background: rgba(220,53,69,0.1); border-radius: 6px; padding: 10px; margin-bottom: 10px; display: none;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                        <span data-i18n="wallets.net_balance">المطلوب من الصافي:</span>
+                        <span id="calc_net_amount" style="color: #00ffcc; font-weight: bold;">$0.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-top: 5px;">
+                        <span data-i18n="wallets.fees">رسوم (1%):</span>
+                        <span id="calc_fee" style="color: #ff5e5e; font-weight: bold;">$0.00</span>
+                    </div>
+                    <hr style="border-color: rgba(255,255,255,0.1); margin: 8px 0;">
+                    <div style="display: flex; justify-content: space-between; font-size: 1rem;">
+                        <span style="font-weight: bold;" data-i18n="wallets.total_required">إجمالي المسحوب من الرصيد:</span>
+                        <span id="calc_total" style="color: #fff; font-weight: bold;">$0.00</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="wallets.notes">ملاحظات</label>
+                    <textarea name="withdraw_note" id="merchant_withdraw_note" data-i18n-placeholder="wallets.notes_placeholder" placeholder="ملاحظات السحب"></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="background: #dc3545; width: 100%; padding: 14px;" data-i18n="wallets.confirm_deduct">تأكيد السحب</button>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="/assets/js/i18n.js"></script>
+<script src="assets/js/camera_manager.js"></script>
+<script src="assets/js/xlsx.full.min.js"></script>
+<script src="assets/js/wallets.js"></script>

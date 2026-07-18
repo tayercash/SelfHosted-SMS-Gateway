@@ -1,0 +1,48 @@
+/* تنسيق الصفحات */
+.page {
+  display: none; /* إخفاء الكل في البداية */
+  height: 80vh;
+  text-align: center;
+  font-size: 24px;
+}
+
+.active {
+  display: block; /* إظهار الصفحة النشطة فقط */
+}
+
+/* تنسيق شريط الأزرار (مكان الدائرة الحمراء في صورتك) */
+.nav-bar {
+  position: absolute;
+  bottom: 0.5rem;
+  inset-inline-start: 0.5rem;
+  inset-inline-end: 0.5rem;
+  padding: 1rem;
+  display: flex;
+  gap: 20px;
+  background: #333;
+  border-radius: 30px;
+  display: flex;
+}
+
+.nav-item {
+  flex: 1; /* كل زرار ياخد مساحة متساوية (1/3 العرض) */
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+/* تكبير الأيقونة شوية */
+.nav-item i {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+/* تصغير الخط تحت الأيقونة */
+.nav-item span {
+  font-size: 12px;
+}
+
+/* تأثير عند الضغط */
+.nav-item:active,
+.nav-item:hover {
+  color: #007bff; /* لون أزرق عند الاختيار */
+}

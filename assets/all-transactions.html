@@ -1,0 +1,1301 @@
+<style>
+    .at-wrap {
+        margin: 0;
+        padding: 0 20px 20px;
+    }
+
+    .at-count {
+        color: var(--text-dim);
+        font-size: 0.85rem;
+        font-weight: 400;
+    }
+
+    .table-wrap {
+        background: var(--sidebar-bg);
+        border: 1px solid var(--mou_border_color);
+        border-radius: 20px;
+        overflow: auto;
+        box-shadow: var(--shadow-md);
+        max-height: 730px;
+    }
+
+    .table-wrap table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: right;
+    }
+
+    .table-wrap th {
+        background: var(--sidebar-bg);
+        border-bottom: 2px solid rgba(255, 204, 0, 0.1);
+        padding: 14px 18px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--primary-color);
+        white-space: nowrap;
+    }
+
+    .table-wrap td {
+        padding: 14px 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+
+    .table-wrap tbody tr {
+        transition: background 0.2s;
+    }
+
+    .table-wrap tbody tr:hover {
+        background: rgba(255, 204, 0, 0.02);
+    }
+
+    .table-wrap tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .status-tag {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 10px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+    .status-confirmed {
+        color: #2ec76e;
+        background: rgba(46, 199, 110, 0.1);
+    }
+
+    .status-pending {
+        color: #f59e0b;
+        background: rgba(245, 158, 11, 0.1);
+    }
+
+    .badge-incoming {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(46, 199, 110, 0.15);
+        color: #2ec76e;
+    }
+
+    .badge-outgoing {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+    }
+
+    .badge-etisalat {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(255, 204, 0, 0.15);
+        color: #ffcc00;
+    }
+
+    .badge-vodafone {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(99, 102, 241, 0.15);
+        color: #818cf8;
+    }
+
+    .badge-other {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.08);
+        color: #ccc;
+    }
+
+    .btn-sm {
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid;
+        font-weight: 600;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-family: inherit;
+        background: transparent;
+    }
+
+    .btn-sm:hover {
+        transform: translateY(-1px);
+    }
+
+    .btn-send {
+        color: #818cf8;
+        border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-send:hover {
+        background: #6366f1;
+        color: #fff;
+    }
+
+    .empty-msg {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-dim);
+    }
+
+    .empty-msg i {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    .btn-wallet-op {
+        padding: 5px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 204, 0, 0.2);
+        background: rgba(255, 204, 0, 0.08);
+        color: #ffcc00;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 0.85rem;
+    }
+
+    .btn-wallet-op:hover {
+        background: rgba(255, 204, 0, 0.2);
+        transform: translateY(-1px);
+    }
+
+    .btn-wallet-done {
+        background: rgba(34, 197, 94, 0.15) !important;
+        border-color: #22c55e !important;
+        color: #22c55e !important;
+        cursor: default !important;
+        opacity: 0.7;
+        transform: none !important;
+    }
+
+    .at-wallet-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .at-wallet-item:hover {
+        background: rgba(255, 204, 0, 0.08);
+        border-color: rgba(255, 204, 0, 0.2);
+    }
+
+    .at-wallet-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .at-wallet-info strong {
+        color: var(--text-main);
+        font-size: 0.9rem;
+    }
+
+    .at-wallet-balance {
+        font-size: 0.85rem;
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    .at-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        margin-top: 16px;
+        padding: 12px;
+    }
+
+    .at-pagination button {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text-main);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.85rem;
+        transition: all 0.3s;
+    }
+
+    .at-pagination button:hover:not(:disabled) {
+        border-color: rgba(255, 204, 0, 0.3);
+        color: var(--primary-color);
+    }
+
+    .at-pagination button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .at-pagination .page-info {
+        color: var(--text-dim);
+        font-size: 0.85rem;
+    }
+
+    @media (max-width: 768px) {
+        .table-wrap table {
+            border: none;
+        }
+
+        .table-wrap thead {
+            display: none;
+        }
+
+        .table-wrap tbody tr {
+            display: block;
+            background: var(--sidebar-bg);
+            border: 1px solid var(--mou_border_color);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .table-wrap tbody td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 0;
+            text-align: start;
+        }
+
+        .table-wrap tbody td:last-child {
+            border-bottom: none;
+        }
+
+        .table-wrap tbody td::before {
+            content: attr(data-label);
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            font-weight: 600;
+            white-space: nowrap;
+            margin-inline-start: 8px;
+        }
+
+        .table-wrap tbody td[data-label=""] {
+            display: none;
+        }
+    }
+
+    /* ===== فلتر التاريخ ===== */
+
+    .at-toggle {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 26px;
+        flex-shrink: 0;
+    }
+
+    .at-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .at-toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 26px;
+        transition: 0.3s;
+    }
+
+    .at-toggle-slider::before {
+        content: '';
+        position: absolute;
+        height: 20px;
+        width: 20px;
+        left: 3px;
+        bottom: 3px;
+        background: #fff;
+        border-radius: 50%;
+        transition: 0.3s;
+    }
+
+    .at-toggle input:checked+.at-toggle-slider {
+        background: #22c55e;
+    }
+
+    .at-toggle input:checked+.at-toggle-slider::before {
+        transform: translateX(22px);
+    }
+</style>
+
+<div class="at-wrap">
+    <div class="header" style="margin-bottom:16px;">
+        <div class="header-left" style="display:flex;align-items:center;gap:10px;">
+            <h2 style="color:var(--primary-color);font-size:1.1rem;display:flex;align-items:center;gap:8px;margin:0;">
+                <i class="fas fa-exchange-alt"></i> <span data-i18n="transactions.title">كل المعاملات</span>
+            </h2>
+            <span class="at-count" id="at-count" style="color:var(--text-dim);font-size:0.85rem;"></span>
+        </div>
+        <div class="header-tools" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div class="at-filter-tabs" style="display:flex;gap:4px;margin:0;">
+                <button class="active" data-filter="all" onclick="at_setFilter('all')"
+                    style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:rgba(255,204,0,0.08);color:var(--text-main);cursor:pointer;font-size:0.8rem;font-weight:600;transition:all 0.3s;"><span
+                        data-i18n="transactions.filter_all">الكل</span></button>
+                <button data-filter="incoming" onclick="at_setFilter('incoming')"
+                    style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.8rem;font-weight:600;transition:all 0.3s;"><span
+                        style="color:#2ec76e;">🟢</span> وارد</button>
+                <button data-filter="outgoing" onclick="at_setFilter('outgoing')"
+                    style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.8rem;font-weight:600;transition:all 0.3s;"><span
+                        style="color:#ef4444;">🔴</span> خارج</button>
+            </div>
+
+            <div style="width:1px;height:24px;background:var(--mou_border_color);"></div>
+            <button id="at-search-btn"
+                style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.85rem;transition:all 0.3s;"
+                title="بحث"><i class="fas fa-search"></i></button>
+            <div style="width:1px;height:24px;background:var(--mou_border_color);"></div>
+            <button id="at-settings-btn"
+                style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.85rem;transition:all 0.3s;"
+                data-i18n-title="transactions.settings"><i class="fas fa-cog"></i></button>
+            <div style="width:1px;height:24px;background:var(--mou_border_color);"></div>
+            <select id="at-quick-date" onchange="at_onQuickDate()"
+                style="padding:6px 10px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);font-size:0.8rem;cursor:pointer;outline:none;font-family:inherit;">
+                <option value="" data-i18n="transactions.choose_period">المدة</option>
+                <option value="today" data-i18n="transactions.today">اليوم</option>
+                <option value="yesterday" data-i18n="transactions.yesterday">بِكره</option>
+                <option value="thisweek" data-i18n="transactions.this_week">هذا الأسبوع</option>
+                <option value="prevweek" data-i18n="transactions.last_week">الأسبوع السابق</option>
+                <option value="thismonth" data-i18n="transactions.this_month">هذا الشهر</option>
+                <option value="prevmonth" data-i18n="transactions.last_month">الشهر السابق</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="at-search-container" style="display:none;padding:0 20px 12px;">
+        <div style="display:flex;gap:10px;align-items:center;">
+            <div style="flex:1;position:relative;">
+                <i class="fas fa-search"
+                    style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:0.9rem;"></i>
+                <input type="text" id="at-search" data-i18n-placeholder="transactions.search"
+                    placeholder="ابحث في كل شيء..." oninput="at_filterDelayed()"
+                    style="width:100%;padding:10px 14px 10px 36px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#fff;font-family:inherit;font-size:0.9rem;transition:border-color 0.3s;outline:none;box-sizing:border-box;">
+            </div>
+            <button id="at-close-search"
+                style="border:none;background:transparent;cursor:pointer;color:var(--text-dim);font-size:1rem;padding:8px;">✖</button>
+        </div>
+    </div>
+
+    <div style="padding: 0 20px;">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr style="position: sticky;top: 0;z-index: 10;">
+                        <th data-i18n="transactions.col_provider">المزود</th>
+                        <th data-i18n="transactions.col_type">النوع</th>
+                        <th data-i18n="transactions.col_deposit">الإيداع</th>
+                        <th data-i18n="transactions.col_from">من</th>
+                        <th data-i18n="transactions.col_to">إلى</th>
+                        <th data-i18n="transactions.col_fees">رسوم</th>
+                        <th data-i18n="transactions.col_dates">التاريخ</th>
+                        <th data-i18n="transactions.col_action">إجراء</th>
+                        <th data-i18n="transactions.col_wallet_op">محفظة</th>
+                    </tr>
+                </thead>
+                <tbody id="at-list">
+                    <tr>
+                        <td colspan="9" class="empty-msg"><i class="fas fa-spinner fa-spin"></i> <span
+                                data-i18n="transactions.loading">جاري التحميل...</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="at-pagination" id="at-pagination" style="display:none;">
+            <button id="at-prev" onclick="at_changePage(-1)"><i class="fas fa-chevron-right"></i> <span
+                    data-i18n="transactions.prev">السابق</span></button>
+            <span class="page-info" id="at-page-info">الصفحة 1 من 1</span>
+            <button id="at-next" onclick="at_changePage(1)"><span data-i18n="transactions.next">التالي</span> <i
+                    class="fas fa-chevron-left"></i></button>
+        </div>
+    </div>
+</div>
+
+<script src="/assets/js/i18n.js"></script>
+<script>
+    var at_currentPage = 1;
+    var at_totalPages = 1;
+    var at_allData = [];
+    var at_limit = 50;
+    var at_currentFilter = 'all';
+    var at_searchTimer = null;
+    var at_dateFrom = '';
+    var at_dateTo = '';
+    var at_walletsCache = {};
+    var at_hasForwardServers = false;
+
+    var at_providerLabels = {
+        'etisalat': { label: function () { return t('transactions.filter_etisalat'); }, badge: 'badge-etisalat', icon: 'fa-sim-card' },
+        'vodafone': { label: function () { return t('transactions.filter_vodafone'); }, badge: 'badge-vodafone', icon: 'fa-mobile-alt' }
+    };
+
+    function at_getProviderInfo(provider) {
+        return at_providerLabels[provider] || { label: provider, badge: 'badge-other', icon: 'fa-tag' };
+    }
+
+    function at_loadWalletsCache(cb) {
+        $.get('/get_wallets?filter=all', function (res) {
+            var wallets = res.data || res || [];
+            at_walletsCache = {};
+            wallets.forEach(function (w) {
+                if (w.WalletNum) at_walletsCache[w.WalletNum.toString().trim()] = w;
+            });
+            if (cb) cb();
+        }).fail(function () { if (cb) cb(); });
+    }
+
+    function at_resolveProvider(p) {
+        var walletNum = p.type === 'incoming' ? (p.receiver_number || '') : (p.sender_number || '');
+        if (walletNum) {
+            var normalized = walletNum.replace(/\s/g, '');
+            if (normalized.startsWith('+20')) normalized = '0' + normalized.substring(3);
+            else if (normalized.startsWith('+2')) normalized = '0' + normalized.substring(2);
+            else if (normalized.startsWith('0020')) normalized = '0' + normalized.substring(4);
+            else if (!normalized.startsWith('0')) normalized = '0' + normalized;
+            var wallet = at_walletsCache[normalized];
+            if (wallet && wallet.walletProvider) return wallet.walletProvider;
+        }
+        return p.provider || '';
+    }
+
+    function at_showToast(msg, isError) {
+        var toastEl = document.getElementById('at-toast');
+        if (!toastEl) {
+            toastEl = document.createElement('div');
+            toastEl.id = 'at-toast';
+            toastEl.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);padding:12px 28px;border-radius:12px;font-weight:600;font-size:0.9rem;display:none;z-index:9999999;background:#2ec76e;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+            document.body.appendChild(toastEl);
+        }
+        toastEl.textContent = msg;
+        toastEl.style.background = isError ? '#ef4444' : '#2ec76e';
+        toastEl.style.display = 'block';
+        setTimeout(function () { toastEl.style.display = 'none'; }, 3000);
+    }
+
+    // Search toggle
+    $('#at-search-btn').on('click', function () {
+        var sc = $('#at-search-container');
+        if (sc.is(':hidden')) {
+            sc.slideDown(200, function () { $('#at-search').focus(); });
+        } else {
+            sc.slideUp(200);
+        }
+    });
+    $('#at-close-search').on('click', function () {
+        $('#at-search-container').slideUp(200);
+        $('#at-search').val('').trigger('input');
+    });
+
+    function at_load() {
+        var params = 'page=' + at_currentPage + '&limit=' + at_limit;
+        if (at_currentFilter !== 'all') params += '&type=' + encodeURIComponent(at_currentFilter);
+
+        var q = document.getElementById('at-search').value.trim();
+        if (q) params += '&search=' + encodeURIComponent(q);
+
+        if (at_dateFrom) params += '&dateFrom=' + encodeURIComponent(at_dateFrom);
+        if (at_dateTo) params += '&dateTo=' + encodeURIComponent(at_dateTo);
+
+        $.get('/api/transactions/all?' + params, function (data) {
+            at_allData = data.transactions || [];
+            at_totalPages = Math.ceil((data.total || 0) / at_limit) || 1;
+            at_render(at_allData);
+            at_updatePagination();
+        }).fail(function () {
+            at_showToast(t('transactions.loading'), false);
+        });
+    }
+
+    function at_normalizePhone(num) {
+        if (!num) return '-';
+        var s = num.replace(/\s/g, '');
+        if (s.startsWith('+20')) s = '0' + s.substring(3);
+        else if (s.startsWith('+2')) s = '0' + s.substring(2);
+        else if (s.startsWith('0020')) s = '0' + s.substring(4);
+        else if (!s.startsWith('0')) s = '0' + s;
+        return s;
+    }
+
+    function at_formatTime(dateStr) {
+        if (!dateStr) return '-';
+        dateStr = dateStr.replace(/[٠١٢٣٤٥٦٧٨٩]/g, function (c) {
+            return String.fromCharCode(c.charCodeAt(0) - 0x0660 + 48);
+        });
+        var parts = dateStr.split(' ');
+        var datePart = parts[0] || '';
+        var timePart = parts[1] || '';
+        if (!datePart) return dateStr;
+        var d = datePart.split('-');
+        if (d.length === 3) {
+            datePart = d[2] + '-' + d[1] + '-' + d[0];
+        }
+        if (timePart) {
+            var tParts = timePart.split(':');
+            var h = parseInt(tParts[0], 10);
+            var m = tParts[1] || '00';
+            var ampm = h >= 12 ? 'م' : 'ص';
+            if (h > 12) h = h - 12;
+            if (h === 0) h = 12;
+            timePart = String(h).padStart(2, '0') + ':' + m + ' ' + ampm;
+        }
+        return datePart + (timePart ? ' ' + timePart : '');
+    }
+
+    function at_onQuickDate() {
+        var val = document.getElementById('at-quick-date').value;
+        if (!val) return;
+        var from = '', to = '';
+        var today = new Date();
+        var y = today.getFullYear();
+        var m = today.getMonth();
+        var d = today.getDate();
+
+        function fmt(date) {
+            return date.getFullYear() + '-' +
+                String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                String(date.getDate()).padStart(2, '0');
+        }
+
+        switch (val) {
+            case 'today':
+                from = to = fmt(today);
+                break;
+            case 'yesterday': {
+                var yest = new Date(today);
+                yest.setDate(yest.getDate() - 1);
+                from = to = fmt(yest);
+                break;
+            }
+            case 'thisweek': {
+                var start = new Date(today);
+                start.setDate(d - start.getDay());
+                from = fmt(start);
+                to = fmt(today);
+                break;
+            }
+            case 'prevweek': {
+                var end = new Date(today);
+                end.setDate(d - end.getDay() - 1);
+                var start = new Date(end);
+                start.setDate(end.getDate() - 6);
+                from = fmt(start);
+                to = fmt(end);
+                break;
+            }
+            case 'thismonth':
+                from = y + '-' + String(m + 1).padStart(2, '0') + '-01';
+                to = fmt(today);
+                break;
+            case 'prevmonth': {
+                var pm = m === 0 ? 11 : m - 1;
+                var py = m === 0 ? y - 1 : y;
+                from = py + '-' + String(pm + 1).padStart(2, '0') + '-01';
+                var lastDay = new Date(py, pm + 1, 0).getDate();
+                to = py + '-' + String(pm + 1).padStart(2, '0') + '-' + String(lastDay).padStart(2, '0');
+                break;
+            }
+        }
+        at_dateFrom = from;
+        at_dateTo = to;
+        at_currentPage = 1;
+        at_load();
+    }
+
+    function at_setFilter(filter) {
+        at_currentFilter = filter;
+        at_currentPage = 1;
+        document.querySelectorAll('.at-filter-tabs button').forEach(function (b) {
+            var isActive = b.dataset.filter === filter;
+            b.classList.toggle('active', isActive);
+            b.style.background = isActive ? 'rgba(255,204,0,0.08)' : 'transparent';
+            b.style.color = isActive ? 'var(--text-main)' : 'var(--text-dim)';
+            b.style.borderColor = isActive ? 'rgba(255,204,0,0.3)' : 'var(--mou_border_color)';
+        });
+        at_load();
+    }
+
+    function at_filterDelayed() {
+        clearTimeout(at_searchTimer);
+        at_searchTimer = setTimeout(function () {
+            at_currentPage = 1;
+            at_loadWalletsAndServers(function () { at_load(); });
+        }, 400);
+    }
+
+    function at_render(payments) {
+        var tbody = document.getElementById('at-list');
+        var countEl = document.getElementById('at-count');
+        if (!payments || payments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="empty-msg"><i class="fas fa-inbox"></i> ' + t('transactions.no_transactions') + '</td></tr>';
+            countEl.textContent = '';
+            return;
+        }
+        countEl.textContent = '(' + payments.length + ')';
+        var html = '';
+        payments.forEach(function (p) {
+            var isIncoming = p.type === 'incoming';
+            var typeBadge = isIncoming
+                ? '<span class="badge-incoming"><i class="fas fa-arrow-down"></i> ' + t('transactions.badge_incoming') + '</span>'
+                : '<span class="badge-outgoing"><i class="fas fa-arrow-up"></i> ' + t('transactions.badge_outgoing') + '</span>';
+            var amountColor = isIncoming ? '#2ec76e' : '#ef4444';
+            var amountSign = isIncoming ? '+' : '-';
+
+            var pInfo = at_getProviderInfo(p.provider);
+
+            var fwdBtn = '';
+            if (!p.is_custom) {
+                if (!at_hasForwardServers) {
+                    fwdBtn = '<button class="btn-sm btn-send" disabled title="' + (t('transactions.no_servers') || 'لا يوجد سيرفرات') + '" style="opacity:0.3;cursor:not-allowed;"><i class="fas fa-paper-plane"></i></button>';
+                } else {
+                    fwdBtn = '<button class="btn-sm btn-send" onclick="at_forwardTxn(' + JSON.stringify(p.id) + ', \'' + p.provider + '\', \'' + p.type + '\')" title="' + t('transactions.resend') + '"><i class="fas fa-paper-plane"></i></button>';
+                }
+            }
+
+            var resolvedProvider = at_resolveProvider(p);
+
+            html += '<tr>';
+            html += '<td data-label="' + t('transactions.col_provider') + '">';
+            var providerLogo = resolvedProvider ? 'assets/images/wallets_providers/' + resolvedProvider.toLowerCase() + '.png' : '';
+            html += providerLogo ? '<img src="' + providerLogo + '" alt="' + resolvedProvider + '" style="height:20px;vertical-align:middle;">' : '<span style="color:var(--text-dim);font-size:0.8rem;">' + (resolvedProvider || '-') + '</span>';
+            html += '</td>';
+            html += '<td data-label="' + t('transactions.col_type') + '">' + typeBadge + '</td>';
+            html += '<td data-label="' + t('transactions.col_deposit') + '"><strong style="color:' + amountColor + ';">' + amountSign + (p.amount ? parseFloat(p.amount).toFixed(2) : '0.00') + ' ' + t('common.egp') + '</strong></td>';
+            html += '<td data-label="' + t('transactions.col_from') + '" dir="ltr" style="font-size:0.85rem;">' + at_normalizePhone(p.sender_number) + (p.sender_name ? '<br><small style="color:var(--text-dim)">' + p.sender_name + '</small>' : '') + '</td>';
+            html += '<td data-label="' + t('transactions.col_to') + '" dir="ltr">' + at_normalizePhone(p.receiver_number) + '</td>';
+            html += '<td data-label="' + t('transactions.col_fees') + '">' + (p.transfer_fee ? parseFloat(p.transfer_fee).toFixed(2) : '-') + '</td>';
+            html += '<td data-label="' + t('transactions.col_dates') + '" style="font-size:0.8rem;">' + at_formatTime(p.received_at || p.created_at) + '</td>';
+            html += '<td data-label="' + t('transactions.col_action') + '">' + fwdBtn + '</td>';
+            var walletNum = isIncoming ? (p.receiver_number || '') : (p.sender_number || '');
+            var walletNumDisplay = at_normalizePhone(walletNum);
+            if (walletNum) {
+                var txKey = (p.id || p.received_at || p.created_at || '') + '_' + walletNum;
+                var alreadyDone = at_doneWalletOps[txKey];
+                if (alreadyDone) {
+                    html += '<td data-label="' + t('transactions.col_wallet_op') + '"><button class="btn-sm btn-wallet-op btn-wallet-done" disabled title="' + t('transactions.wallet_op_done') + '"><i class="fas fa-check-circle"></i> <span style="font-size:0.75rem;">' + walletNumDisplay + '</span></button></td>';
+                } else {
+                    html += '<td data-label="' + t('transactions.col_wallet_op') + '"><button class="btn-sm btn-wallet-op" id="at-wbtn-' + txKey + '" onclick="at_openWalletOp(' + (p.amount ? parseFloat(p.amount).toFixed(2) : '0') + ', \'' + (p.type || 'incoming') + '\', \'' + walletNum + '\', \'' + txKey + '\', \'' + (p.provider || '') + '\')" title="' + t('transactions.wallet_add_deduct') + '"><i class="fas fa-wallet"></i> <span style="font-size:0.75rem;">' + walletNumDisplay + '</span></button></td>';
+                }
+            } else {
+                html += '<td data-label="' + t('transactions.col_wallet_op') + '" style="color:var(--text-dim);font-size:0.8rem;">-</td>';
+            }
+            html += '</tr>';
+        });
+        tbody.innerHTML = html;
+    }
+
+    function at_updatePagination() {
+        var pag = document.getElementById('at-pagination');
+        var info = document.getElementById('at-page-info');
+        if (at_totalPages <= 1) { pag.style.display = 'none'; return; }
+        pag.style.display = 'flex';
+        info.textContent = t('transactions.page_info', { current: at_currentPage, total: at_totalPages });
+        document.getElementById('at-prev').disabled = at_currentPage <= 1;
+        document.getElementById('at-next').disabled = at_currentPage >= at_totalPages;
+    }
+
+    function at_changePage(dir) {
+        var newPage = at_currentPage + dir;
+        if (newPage < 1 || newPage > at_totalPages) return;
+        at_currentPage = newPage;
+        at_load();
+    }
+
+    function at_forwardTxn(id, provider, type) {
+        var endpoint = '';
+        if (type === 'incoming') {
+            endpoint = '/api/' + provider + '/payments/forward/' + id;
+        } else {
+            endpoint = '/api/' + provider + '/outgoing/forward/' + id;
+        }
+
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:99999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:var(--sidebar-bg);border:1px solid var(--mou_border_color);border-radius:16px;padding:24px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto;">' +
+            '<h3 style="color:var(--primary-color);margin:0 0 12px 0;font-size:1rem;"><i class="fas fa-server"></i> ' + (t('transactions.forward_info_title') || 'معلومات الإرسال للسيرفر الخارجي') + '</h3>' +
+            '<div id="at-fwd-results" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;color:var(--primary-color);"></i><div style="margin-top:8px;font-size:.85rem;color:var(--text-dim);">' + (t('transactions.forward_loading') || 'جاري الإرسال...') + '</div></div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+
+        fetch(endpoint, { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var container = document.getElementById('at-fwd-results');
+                if (!container) return;
+                if (!d.details || d.details.length === 0) {
+                    container.innerHTML = '<p style="color:#ef4444;">' + (d.error || t('transactions.resend_failed') || 'فشل') + '</p>';
+                    return;
+                }
+                var h = '';
+                d.details.forEach(function (srv, idx) {
+                    var icon = srv.success ? '<i class="fas fa-check-circle" style="color:#2ec76e;"></i>' : '<i class="fas fa-times-circle" style="color:#ef4444;"></i>';
+                    var time = srv.received_at ? new Date(srv.received_at).toLocaleTimeString() : '-';
+                    h += '<div style="padding:10px 12px;border:1px solid var(--mou_border_color);border-radius:10px;margin-bottom:8px;">';
+                    h += '<div style="display:flex;align-items:center;justify-content:space-between;">';
+                    h += '<div style="display:flex;align-items:center;gap:10px;">' + icon + '<div><div style="font-weight:600;font-size:0.9rem;">' + (srv.name || 'Server') + '</div>';
+                    h += '<div style="font-size:0.75rem;color:var(--text-dim);direction:ltr;">' + (srv.url || '') + '</div></div></div>';
+                    h += '<div style="text-align:start;font-size:0.8rem;color:var(--text-dim);">';
+                    if (srv.success) {
+                        h += '<div>' + (t('transactions.received_at') || 'وصل') + ': <strong style="color:var(--primary-color);">' + time + '</strong></div>';
+                    } else {
+                        h += '<div style="color:#ef4444;font-size:0.75rem;">' + (srv.error || 'Error') + '</div>';
+                    }
+                    h += '</div></div>';
+                    if (srv.request || srv.response) {
+                        h += '<div style="margin-top:6px;text-align:start;"><button class="at-view-resp-btn" onclick="at_toggleDetails(' + idx + ')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--mou_border_color);background:rgba(255,204,0,.08);color:var(--primary-color);font-size:.75rem;cursor:pointer;font-family:inherit;transition:all .2s;"><i class="fas fa-eye" style="margin-inline-end:4px;"></i>' + (t('transactions.view_response') || 'عرض الطلب / الاستجابة') + '</button></div>';
+                        h += '<div class="at-details-panel" data-idx="' + idx + '" style="display:none;margin-top:8px;">';
+                        if (srv.request) {
+                            h += '<div style="margin-bottom:6px;"><div style="font-size:.7rem;font-weight:600;color:var(--primary-color);margin-bottom:3px;"><i class="fas fa-arrow-up" style="margin-inline-end:4px;"></i>' + (t('transactions.request_label') || 'الطلب') + '</div>';
+                            h += '<pre style="margin:0;padding:8px;background:rgba(0,0,0,.3);border-radius:8px;font-size:.7rem;color:var(--text-dim);direction:ltr;text-align:left;overflow-x:auto;white-space:pre-wrap;word-break:break-all;">' + JSON.stringify(srv.request, null, 2) + '</pre></div>';
+                        }
+                        if (srv.response) {
+                            h += '<div><div style="font-size:.7rem;font-weight:600;color:#2ec76e;margin-bottom:3px;"><i class="fas fa-arrow-down" style="margin-inline-end:4px;"></i>' + (t('transactions.response_label') || 'الاستجابة') + '</div>';
+                            h += '<pre style="margin:0;padding:8px;background:rgba(0,0,0,.3);border-radius:8px;font-size:.7rem;color:var(--text-dim);direction:ltr;text-align:left;overflow-x:auto;white-space:pre-wrap;word-break:break-all;">' + JSON.stringify(srv.response, null, 2) + '</pre></div>';
+                        }
+                        h += '</div>';
+                    }
+                    h += '</div>';
+                });
+                container.innerHTML = h;
+                var closeBtn = document.createElement('button');
+                closeBtn.textContent = t('modems.close') || 'إغلاق';
+                closeBtn.style.cssText = 'margin-top:12px;padding:10px 24px;border-radius:10px;border:none;background:var(--primary-color);color:#0b0a02;font-weight:700;cursor:pointer;font-family:inherit;width:100%;';
+                closeBtn.addEventListener('click', function () { overlay.remove(); });
+                container.appendChild(closeBtn);
+            })
+            .catch(function (e) {
+                var container = document.getElementById('at-fwd-results');
+                if (container) container.innerHTML = '<p style="color:#ef4444;">' + e.message + '</p>';
+            });
+    }
+
+    function at_toggleDetails(idx) {
+        var panel = document.querySelector('.at-details-panel[data-idx="' + idx + '"]');
+        if (!panel) return;
+        var visible = panel.style.display !== 'none';
+        panel.style.display = visible ? 'none' : 'block';
+        var btn = panel.parentElement.querySelector('.at-view-resp-btn i');
+        if (btn) btn.className = visible ? 'fas fa-eye' : 'fas fa-eye-slash';
+    }
+
+    function at_loadWalletsAndServers(cb) {
+        at_loadWalletsCache(function () {
+            $.get('/api/forward-servers', function (servers) {
+                at_hasForwardServers = servers && servers.length > 0;
+            }).fail(function () { at_hasForwardServers = false; }).always(function () {
+                $.get('/get_executed_wallet_ops', function (res) {
+                    if (res && res.data) {
+                        var serverOps = res.data;
+                        var changed = false;
+                        Object.keys(serverOps).forEach(function (key) {
+                            var parts = key.split(':');
+                            if (parts.length === 3) {
+                                var txKey = parts[1] + '_' + parts[2];
+                                if (!at_doneWalletOps[txKey]) {
+                                    at_doneWalletOps[txKey] = true;
+                                    changed = true;
+                                }
+                            }
+                        });
+                        if (changed) {
+                            localStorage.setItem('at_doneWalletOps', JSON.stringify(at_doneWalletOps));
+                        }
+                    }
+                }).always(function () { cb(); });
+            });
+        });
+    }
+
+    at_loadWalletsAndServers(function () { at_load(); });
+
+    $(document).on('page_shown', function (e, url) {
+        if (url === 'assets/all-transactions.html') {
+            at_loadWalletsAndServers(function () { at_load(); });
+        }
+    });
+
+    if (window.socket) {
+        var reloadEvents = ['etisalat-new-payment', 'etisalat-new-outgoing', 'vodafone-new-payment', 'vodafone-new-outgoing', 'analysis-new-result'];
+        reloadEvents.forEach(function (ev) {
+            window.socket.on(ev, function () { at_loadWalletsAndServers(function () { at_load(); }); });
+        });
+    }
+
+    // Wallet Operation from Transactions
+    var at_walletOpAmount = 0;
+    var at_walletOpType = 'add';
+    var at_walletOpNum = '';
+    var at_walletOpTxKey = '';
+    var at_walletOpProvider = '';
+    var at_doneWalletOps = JSON.parse(localStorage.getItem('at_doneWalletOps') || '{}');
+
+    function at_openWalletOp(amount, type, walletNum, txKey, provider) {
+        at_walletOpAmount = amount;
+        at_walletOpType = type === 'incoming' ? 'add' : 'deduct';
+        at_walletOpNum = walletNum;
+        at_walletOpTxKey = txKey;
+        at_walletOpProvider = provider || '';
+
+        if (at_doneWalletOps[txKey]) return;
+
+        $.get('/get_wallets?filter=all', function (res) {
+            var wallets = res.data || res || [];
+            var found = null;
+            wallets.forEach(function (w) {
+                if (w.WalletNum && w.WalletNum.toString() === walletNum.toString()) {
+                    found = w;
+                }
+            });
+
+            if (found) {
+                at_executeWalletOp(found.id);
+            } else {
+                at_autoCreateAndExecute(walletNum);
+            }
+        });
+    }
+
+    function at_autoCreateAndExecute(walletNum) {
+        var payload = {
+            name: '',
+            WalletNum: walletNum,
+            balance: at_walletOpType === 'deduct' ? parseFloat(at_walletOpAmount) || 0 : 0,
+            Monthly_limit: 200000,
+            daily_limit: 60000,
+            walletProvider: at_walletOpProvider || 'etisalat',
+            merchant_id: null,
+            note: 'Auto-created from transaction'
+        };
+        $.ajax({
+            url: '/savewallet',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function (response) {
+                if (response.success || response.card || response.id) {
+                    var newId = (response.card && response.card.id) || response.id || response.data;
+                    at_showToast(t('transactions.wallet_created') || 'تم إنشاء المحفظة تلقائياً', false);
+                    at_executeWalletOp(newId);
+                } else {
+                    at_showToast(response.error || t('transactions.wallet_create_failed'), true);
+                }
+            },
+            error: function () {
+                at_showToast(t('transactions.wallet_create_failed'), true);
+            }
+        });
+    }
+
+    function at_executeWalletOp(walletId) {
+        var endpoint = at_walletOpType === 'add' ? '/add_wallet_balance' : '/wallet_transaction';
+        var data = { card_id: walletId };
+        if (at_walletOpType === 'add') {
+            data.amount = at_walletOpAmount;
+            data.note = t('transactions.from_transaction');
+        } else {
+            data.price = at_walletOpAmount;
+            data.note = t('transactions.from_transaction');
+        }
+        $.ajax({
+            url: endpoint,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (response) {
+                if (response.success) {
+                    at_doneWalletOps[at_walletOpTxKey] = true;
+                    at_markWalletBtnDone(at_walletOpTxKey);
+                    at_showToast(t('transactions.wallet_op_success'), false);
+                } else {
+                    at_showToast(response.error || t('transactions.wallet_op_failed'), true);
+                }
+            },
+            error: function (xhr) {
+                var err = xhr.responseJSON;
+                at_showToast(err ? err.error : t('transactions.wallet_op_failed'), true);
+            }
+        });
+    }
+
+    function at_markWalletBtnDone(txKey) {
+        at_doneWalletOps[txKey] = true;
+        localStorage.setItem('at_doneWalletOps', JSON.stringify(at_doneWalletOps));
+        var btn = document.getElementById('at-wbtn-' + txKey);
+        if (btn) {
+            btn.className = 'btn-sm btn-wallet-op btn-wallet-done';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> <span style="font-size:0.75rem;">' + at_normalizePhone(at_walletOpNum) + '</span>';
+            btn.title = t('transactions.wallet_op_done');
+            btn.onclick = null;
+        }
+    }
+
+    function at_showAddWalletPopup(walletNum) {
+        document.getElementById('at-add-wallet-num').value = walletNum;
+        document.getElementById('at-add-wallet-name').value = '';
+        document.getElementById('at-add-wallet-provider').value = '';
+        document.getElementById('at-add-wallet-balance').value = '0';
+        document.getElementById('at-add-wallet-monthly').value = '0';
+        document.getElementById('at-add-wallet-daily').value = '0';
+        document.getElementById('at-add-wallet-merchant').value = '';
+        document.getElementById('at-add-wallet-note').value = '';
+        document.getElementById('at-add-wallet-result').textContent = '';
+        loadMerchantsForAT();
+        $('#at-add-wallet-popup').openpopup();
+    }
+
+    function loadMerchantsForAT() {
+        $.get('/get_merchants', function (res) {
+            var merchants = res.data || res || [];
+            var sel = document.getElementById('at-add-wallet-merchant');
+            sel.innerHTML = '<option value="" data-i18n="wallets.no_price">' + t('wallets.no_price') + '</option>';
+            merchants.forEach(function (m) {
+                sel.innerHTML += '<option value="' + m.id + '">' + m.name + '</option>';
+            });
+            if (window.updateCustomSelect) {
+                window.updateCustomSelect($(sel));
+            }
+        });
+    }
+
+    function at_submitNewWallet() {
+        var walletNum = document.getElementById('at-add-wallet-num').value.trim();
+        var walletName = document.getElementById('at-add-wallet-name').value.trim();
+        var provider = document.getElementById('at-add-wallet-provider').value;
+        var balance = document.getElementById('at-add-wallet-balance').value;
+        var monthly = document.getElementById('at-add-wallet-monthly').value;
+        var daily = document.getElementById('at-add-wallet-daily').value;
+        var merchantId = document.getElementById('at-add-wallet-merchant').value;
+        var note = document.getElementById('at-add-wallet-note').value.trim();
+        var resultEl = document.getElementById('at-add-wallet-result');
+
+        if (!walletNum) {
+            resultEl.textContent = t('transactions.wallet_num_required');
+            resultEl.style.color = '#ef4444';
+            return;
+        }
+        if (!walletName) {
+            resultEl.textContent = t('transactions.wallet_name_required');
+            resultEl.style.color = '#ef4444';
+            return;
+        }
+        if (!provider) {
+            resultEl.textContent = t('transactions.wallet_provider_required');
+            resultEl.style.color = '#ef4444';
+            return;
+        }
+
+        var payload = {
+            WalletNum: walletNum,
+            name: walletName,
+            walletProvider: provider,
+            balance: parseFloat(balance) || 0,
+            Monthly_limit: parseFloat(monthly) || 0,
+            daily_limit: parseFloat(daily) || 0,
+            merchant_id: merchantId || null,
+            note: note
+        };
+
+        $.ajax({
+            url: '/savewallet',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function (response) {
+                if (response.success || response.card || response.id) {
+                    var newId = (response.card && response.card.id) || response.id || response.data;
+                    at_doneWalletOps[at_walletOpTxKey] = true;
+                    $('#at-add-wallet-popup').closepopup();
+                    at_showToast(t('transactions.wallet_created'), false);
+                    at_executeWalletOp(newId);
+                } else {
+                    resultEl.textContent = response.error || t('transactions.wallet_create_failed');
+                    resultEl.style.color = '#ef4444';
+                }
+            },
+            error: function (xhr) {
+                var err = xhr.responseJSON;
+                resultEl.textContent = err ? err.error : t('transactions.wallet_create_failed');
+                resultEl.style.color = '#ef4444';
+            }
+        });
+    }
+
+    // ===== Settings Popup =====
+    $('#at-settings-btn').on('click', function () {
+        $('#at-settings-popup').openpopup();
+    });
+
+    // Auto-execute wallet op toggle
+    var at_autoWalletEnabled = localStorage.getItem('at_autoWalletOp') === 'true';
+    var $atAutoToggle = $('#at-auto-wallet-toggle');
+    var $atAutoStatus = $('#at-auto-wallet-status');
+
+    function at_updateAutoStatus() {
+        if (at_autoWalletEnabled) {
+            $atAutoStatus.html('<span style="color:#22c55e;"><i class="fas fa-check-circle"></i> ' + t('transactions.auto_wallet_op_on') + '</span>');
+        } else {
+            $atAutoStatus.html('<span style="color:var(--text-dim);"><i class="fas fa-times-circle"></i> ' + t('transactions.auto_wallet_op_off') + '</span>');
+        }
+    }
+    $atAutoToggle.prop('checked', at_autoWalletEnabled);
+    at_updateAutoStatus();
+
+    document.addEventListener('i18n:ready', function () { at_updateAutoStatus(); });
+
+    $atAutoToggle.on('change', function () {
+        at_autoWalletEnabled = $(this).is(':checked');
+        localStorage.setItem('at_autoWalletOp', at_autoWalletEnabled);
+        at_updateAutoStatus();
+    });
+
+    // Auto-execute on new transaction socket events
+    if (window.socket) {
+        var autoEvents = ['etisalat-new-payment', 'etisalat-new-outgoing', 'vodafone-new-payment', 'vodafone-new-outgoing'];
+        autoEvents.forEach(function (ev) {
+            window.socket.on(ev, function (data) {
+                if (!at_autoWalletEnabled) return;
+                if (!data) return;
+
+                var isIncoming = ev.indexOf('payment') > -1;
+                var walletNum = isIncoming ? (data.receiver_number || '') : (data.sender_number || '');
+                if (!walletNum) return;
+
+                var normalized = at_normalizePhone(walletNum).replace(/\s/g, '');
+                var txKey = (data.id || data.received_at || data.created_at || '') + '_' + walletNum;
+                if (at_doneWalletOps[txKey]) return;
+
+                setTimeout(function () {
+                    at_openWalletOp(
+                        data.amount ? parseFloat(data.amount).toFixed(2) : '0',
+                        isIncoming ? 'incoming' : 'outgoing',
+                        walletNum,
+                        txKey,
+                        data.provider || ''
+                    );
+                }, 500);
+            });
+        });
+    }
+
+    // ===== Delete All Transactions =====
+    function at_confirmDeleteAll() {
+        $('#at-settings-popup').closepopup();
+        setTimeout(function () {
+            $('#at-delete-all-input').val('');
+            $('#at-delete-all-confirm-btn').prop('disabled', true).css({ background: 'rgba(239,68,68,0.3)', color: '#aaa', cursor: 'not-allowed' });
+            $('#at-delete-all-result').text('');
+            $('#at-delete-all-popup').openpopup();
+        }, 300);
+    }
+
+    function at_checkDeleteAllInput() {
+        var val = $('#at-delete-all-input').val().trim();
+        var btn = $('#at-delete-all-confirm-btn');
+        if (val === 'DELETE') {
+            btn.prop('disabled', false).css({ background: '#ef4444', color: '#fff', cursor: 'pointer' });
+        } else {
+            btn.prop('disabled', true).css({ background: 'rgba(239,68,68,0.3)', color: '#aaa', cursor: 'not-allowed' });
+        }
+    }
+
+    function at_executeDeleteAll() {
+        var val = $('#at-delete-all-input').val().trim();
+        if (val !== 'DELETE') return;
+
+        var btn = $('#at-delete-all-confirm-btn');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.ajax({
+            url: '/api/transactions/delete-all',
+            type: 'POST',
+            contentType: 'application/json',
+            success: function (res) {
+                if (res.success) {
+                    $('#at-delete-all-popup').closepopup();
+                    at_showToast(t('transactions.delete_all_success'), false);
+                    at_currentPage = 1;
+                    at_load();
+                } else {
+                    $('#at-delete-all-result').text(res.error || t('transactions.delete_all_failed'));
+                    $('#at-delete-all-result').css('color', '#ef4444');
+                    btn.prop('disabled', false).html('<i class="fas fa-trash-alt" style="margin-inline-end:8px;"></i> ' + t('transactions.delete_all'));
+                }
+            },
+            error: function (xhr) {
+                var err = xhr.responseJSON;
+                $('#at-delete-all-result').text(err ? err.error : t('transactions.delete_all_failed'));
+                $('#at-delete-all-result').css('color', '#ef4444');
+                btn.prop('disabled', false).html('<i class="fas fa-trash-alt" style="margin-inline-end:8px;"></i> ' + t('transactions.delete_all'));
+            }
+        });
+    }
+</script>
+
+<!-- Add Wallet Popup (from Transactions) -->
+<div class="mou_popup mou_bottom_pop" id="at-add-wallet-popup">
+    <div class="mou_popup_container mou_box_shadow" style="max-width: 900px; width: 95%;">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" data-i18n="transactions.add_wallet_popup_title">إضافة محفظة جديدة</span>
+            <span class="close_popup" data-closepopup="at-add-wallet-popup"></span>
+        </div>
+        <div class="mou_popup_body" style="max-height:80vh;overflow-y:auto;">
+            <div style="margin-bottom:12px;font-size:0.85rem;color:var(--text-dim);"
+                data-i18n="transactions.wallet_not_found_msg">المحفظة غير موجودة، أضفها أولاً</div>
+            <form id="at-add-wallet-form" onsubmit="event.preventDefault();at_submitNewWallet();">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="wallets.wallet_name">اسم المحفظة</label>
+                        <input type="text" id="at-add-wallet-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="wallets.operation_type">مزود الخدمة</label>
+                        <select id="at-add-wallet-provider" required>
+                            <option value="" data-i18n="wallets.choose_type">اختر المزود</option>
+                            <option value="Axis">Axis</option>
+                            <option value="Etisalat">Etisalat</option>
+                            <option value="Vodafone">Vodafone</option>
+                            <option value="We">We</option>
+                            <option value="Orange">Orange</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="wallets.wallet_number">رقم المحفظة</label>
+                        <input type="text" id="at-add-wallet-num" dir="ltr" readonly style="opacity:0.7;">
+                    </div>
+                    <div class="form-group"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="wallets.monthly_limit">الحد الشهري</label>
+                        <input type="number" id="at-add-wallet-monthly" value="0" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="wallets.daily_limit">الحد اليومي</label>
+                        <input type="number" id="at-add-wallet-daily" value="0" step="1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="wallets.balance">الرصيد</label>
+                        <input type="number" id="at-add-wallet-balance" value="0" step="0.01" style="width: 100%;">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="wallets.price">التاجر (اختياري)</label>
+                        <select id="at-add-wallet-merchant" class="form-control" style="width: 100%;">
+                            <option value="" data-i18n="wallets.no_price">بدون تاجر</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="wallets.notes">ملاحظات</label>
+                        <textarea id="at-add-wallet-note" style="width: 100%;"></textarea>
+                    </div>
+                    <div class="form-group"></div>
+                </div>
+                <div id="at-add-wallet-result" style="font-size:0.85rem;margin-bottom:8px;"></div>
+                <div class="form-row" style="justify-content: center;">
+                    <div class="form-group" style="flex: 0 0 auto; min-width: 200px;">
+                        <button type="submit" class="btn-primary" style="width: 100%;"
+                            data-i18n="transactions.create_and_execute">إنشاء وتنفيذ العملية</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Popup -->
+<div class="mou_popup mou_bottom_pop" id="at-settings-popup">
+    <div class="mou_popup_container mou_box_shadow" style="max-width:500px;width:95%;">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" data-i18n="transactions.settings_title">إعدادات المعاملات</span>
+            <span class="close_popup" data-closepopup="at-settings-popup"></span>
+        </div>
+        <div class="mou_popup_body" style="padding:20px;">
+            <div
+                style="display:flex;justify-content:space-between;align-items:center;padding:16px;border:1px solid var(--mou_border_color);border-radius:12px;margin-bottom:16px;">
+                <div style="flex:1;">
+                    <div style="font-weight:600;font-size:0.95rem;margin-bottom:4px;"
+                        data-i18n="transactions.auto_wallet_op">تنفيذ تلقائي للمحفظة</div>
+                    <div style="font-size:0.8rem;color:var(--text-dim);" data-i18n="transactions.auto_wallet_op_desc">
+                        تنفيذ العملية على المحفظة تلقائياً عند وصول معاملة جديدة إذا كانت المحفظة موجودة</div>
+                </div>
+                <label class="at-toggle" style="margin-inline-start:12px;">
+                    <input type="checkbox" id="at-auto-wallet-toggle">
+                    <span class="at-toggle-slider"></span>
+                </label>
+            </div>
+            <div id="at-auto-wallet-status" style="font-size:0.8rem;margin-bottom:20px;padding:0 4px;"></div>
+            <div style="border-top:1px solid var(--mou_border_color);padding-top:16px;">
+                <button id="at-delete-all-btn" onclick="at_confirmDeleteAll()"
+                    style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.08);color:#ef4444;cursor:pointer;font-size:0.9rem;font-weight:600;transition:all 0.3s;font-family:inherit;"
+                    data-i18n="transactions.delete_all"><i class="fas fa-trash-alt" style="margin-inline-end:8px;"></i>
+                    حذف جميع المعاملات</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete All Confirmation Popup -->
+<div class="mou_popup mou_bottom_pop" id="at-delete-all-popup">
+    <div class="mou_popup_container mou_box_shadow" style="max-width:450px;width:95%;">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" style="color:#ef4444;" data-i18n="transactions.delete_all">حذف جميع
+                المعاملات</span>
+            <span class="close_popup" data-closepopup="at-delete-all-popup"></span>
+        </div>
+        <div class="mou_popup_body" style="padding:20px;">
+            <div style="text-align:center;margin-bottom:20px;">
+                <i class="fas fa-exclamation-triangle"
+                    style="font-size:2.5rem;color:#ef4444;margin-bottom:12px;display:block;"></i>
+                <p style="font-size:0.95rem;line-height:1.6;" data-i18n="transactions.delete_all_confirm">هل أنت متأكد
+                    من حذف جميع المعاملات؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            </div>
+            <div style="margin-bottom:16px;">
+                <input type="text" id="at-delete-all-input" data-i18n-placeholder="transactions.delete_all_confirm2"
+                    placeholder="اكتب DELETE للتأكيد"
+                    style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.05);color:#fff;font-size:0.9rem;text-align:center;font-family:inherit;outline:none;box-sizing:border-box;"
+                    oninput="at_checkDeleteAllInput()">
+            </div>
+            <div id="at-delete-all-result" style="font-size:0.85rem;margin-bottom:12px;text-align:center;"></div>
+            <button id="at-delete-all-confirm-btn" onclick="at_executeDeleteAll()" disabled
+                style="width:100%;padding:12px;border-radius:10px;border:none;background:rgba(239,68,68,0.3);color:#aaa;cursor:not-allowed;font-size:0.9rem;font-weight:600;transition:all 0.3s;font-family:inherit;">
+                <i class="fas fa-trash-alt" style="margin-inline-end:8px;"></i> <span
+                    data-i18n="transactions.delete_all">حذف جميع المعاملات</span>
+            </button>
+        </div>
+    </div>
+</div>

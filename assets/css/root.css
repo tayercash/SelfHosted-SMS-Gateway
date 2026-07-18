@@ -1,0 +1,149 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Noto Sans Arabic', sans-serif;
+    outline-color: var(--primary-color);
+}
+
+*,
+::after,
+::before {
+    box-sizing: border-box;
+    text-size-adjust: none;
+    -webkit-text-size-adjust: none;
+    -ms-text-size-adjust: none;
+    -moz-text-size-adjust: none;
+}
+
+body,
+button,
+a[href],
+input,
+.input_group input,
+.input_group textarea {
+    color: var(--body_text_color);
+}
+
+:root {
+    --input-bg: #19191d;
+    --bg-color: #080809;
+    --card-bg: #121214;
+    --accent-green: #10b981;
+    --danger-red: #ff5252;
+    --text-main: #ffffff;
+    --text-dim: #9e9e9e;
+
+    --colorAccent: #ffcc00;
+    --first_background_color: #080809;
+    --second_background_color: #0c0c0d;
+    --mou_gridiant_background: linear-gradient(186deg, var(--first_background_color) 0%, var(--second_background_color) 49%, var(--second_background_color) 74%, var(--first_background_color) 100%);
+    --bg-success-color: #2ec4b6;
+    --bg-dangr-color: #ff5252;
+    --mou_border_color2: rgba(255, 204, 0, 0.25);
+    --primary-color: #ffcc00;
+    --header-bg: #121214;
+    --status-offline: #ff5252;
+    --sidebar-bg: linear-gradient(135deg, rgba(20, 20, 20, 0.98), rgba(10, 10, 10, 0.99));
+
+    --shadow-xs: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
+    --shadow-lg: 0 8px 25px rgba(0,0,0,0.4);
+    --shadow-xl: 0 15px 35px rgba(0,0,0,0.55);
+    --shadow-inset: inset 0 2px 4px rgba(0,0,0,0.25);
+    --shadow-glow-yellow: 0 0 10px rgba(255,204,0,0.15);
+    --shadow-glow-yellow-hover: 0 0 15px rgba(255,204,0,0.25);
+    --shadow-glow-green: 0 0 10px rgba(16,185,129,0.15);
+    --shadow-glow-red: 0 4px 15px rgba(239,68,68,0.3);
+    --shadow-sidebar: -10px 0 30px rgba(0,0,0,0.7);
+    --shadow-chip: 0 4px 10px rgba(0,0,0,0.25);
+    --shadow-chip-hover: 0 8px 20px rgba(255,204,0,0.2);
+    --shadow-modal: 0 25px 60px rgba(0,0,0,0.75);
+    --shadow-select: 0 10px 25px rgba(0,0,0,0.7);
+    --shadow-toast: 0 0 20px rgba(0,0,0,0.5);
+}
+
+:root.light .custom-select {
+    background: #ffffff !important;
+    border-color: #d0d0d0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+}
+:root.light .custom-select:hover { background: #fafafa !important; }
+:root.light .custom-select.open {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+:root.light .custom-select-trigger { color: #333 !important; }
+:root.light .custom-select-trigger:after {
+    border-top-color: rgba(0, 0, 0, 0.4) !important;
+}
+:root.light .custom-options {
+    background: #ffffff !important;
+    border-color: #d0d0d0 !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1) !important;
+}
+:root.light .custom-option { color: #333 !important; }
+:root.light .custom-option:hover {
+    background: rgba(255, 204, 0, 0.08) !important;
+}
+:root.light .custom-option.selection {
+    background: rgba(255, 204, 0, 0.12) !important;
+}
+
+:root.light {
+    --main_background: #f5f6f8;
+    --elmnt_back: #ffffff;
+
+    --body_text_color: #1a1a2e;
+    --first_color_background: #ffffff;
+    --first_color_text: #1a1a2e;
+    --mou_background: 255, 255, 255;
+    --mou_border_color: #e0e0e0;
+    --bs-gradient: linear-gradient(0deg, rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0));
+    --mou_custom_box_shadow: rgba(0, 0, 0, 0.06) 0px 2px 8px, rgba(0, 0, 0, 0.04) 0px 1px 3px;
+    --mou_custom_box_shadow1: 0px 1px 3px rgba(0,0,0,0.08);
+
+    --bg-color: #f5f6f8;
+    --card-bg: #ffffff;
+    --text-main: #1a1a2e;
+    --text-dim: #7a7a9a;
+    --input-bg: #f0f1f3;
+    --header-bg: #ffffff;
+    --first_background_color: #f5f6f8;
+    --second_background_color: #f0f1f3;
+    --mou_gridiant_background: linear-gradient(186deg, #f5f6f8 0%, #f0f1f3 49%, #f0f1f3 74%, #f5f6f8 100%);
+    --mou_border_color2: rgba(0, 0, 0, 0.1);
+    --sidebar-bg: linear-gradient(135deg, #ffffff, #f5f6f8);
+    --status-offline: #e74c3c;
+
+    --shadow-xs: 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 25px rgba(0,0,0,0.1);
+    --shadow-xl: 0 15px 35px rgba(0,0,0,0.12);
+    --shadow-inset: inset 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-glow-yellow: 0 0 10px rgba(255,204,0,0.08);
+    --shadow-glow-yellow-hover: 0 0 15px rgba(255,204,0,0.12);
+    --shadow-glow-green: 0 0 10px rgba(16,185,129,0.08);
+    --shadow-glow-red: 0 4px 15px rgba(239,68,68,0.15);
+    --shadow-sidebar: -10px 0 30px rgba(0,0,0,0.08);
+    --shadow-chip: 0 4px 10px rgba(0,0,0,0.08);
+    --shadow-chip-hover: 0 8px 20px rgba(255,204,0,0.1);
+    --shadow-modal: 0 25px 60px rgba(0,0,0,0.2);
+    --shadow-select: 0 10px 25px rgba(0,0,0,0.12);
+    --shadow-toast: 0 0 20px rgba(0,0,0,0.15);
+}
+
+:root.dark {
+    --main_background: var(--bg-color);
+    --elmnt_back: var(--card-bg);
+
+    --mou_background: 18, 18, 20;
+    --body_text_color: rgb(255, 255, 255);
+    --first_color_background: #19191d;
+    --first_color_text: rgb(255, 255, 255);
+    --mou_border_color: rgba(255, 204, 0, 0.15);
+    --bs-gradient: linear-gradient(0deg, rgba(255, 204, 0, 0.05), rgba(255, 255, 255, 0));
+    --mou_custom_box_shadow: rgba(0, 0, 0, 0.4) 0px 3px 6px, rgba(0, 0, 0, 0.6) 0px 3px 6px;
+    --mou_custom_box_shadow1: 2px 2px 4px #000000;
+}
