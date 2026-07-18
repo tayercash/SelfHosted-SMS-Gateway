@@ -2,9 +2,6 @@ const http = require("http");
 const https = require("https");
 console.log('Starting main.js...');
 const { Server } = require("socket.io");
-const { SerialPort } = require("serialport");
-const { ReadlineParser } = require("@serialport/parser-readline");
-const { app: electronApp, BrowserWindow, Menu, session, ipcMain, dialog, shell } = require('electron');
 const path = require("path");
 const { exec, spawn } = require('child_process');
 const express = require("express");
@@ -17,976 +14,10 @@ const cookieParser = require("cookie-parser");
 const crypto = require('crypto');
 const fs = require('fs');
 const multer = require('multer');
-/**
- * MouGuard Node.js Client SDK v2.0 — Hardened Edition
- * License verification with anti-tamper, anti-debug, heartbeat, poly-verify.
- *
- * Requirements: Node.js 14+
- *
- * Usage:
- *   const guard = new MouGuard('LICENSE_KEY', 'API_SECRET', 'https://your-server.com');
- *   if (!(await guard.verify())) { guard.terminate(); }
- */
 
-const _c = require('crypto');
-const _o = require('os');
-const _f = require('fs'); 1
-const _p = require('path');
-
-// ──────────────────────────────────────────────
-// Protection error logger (logs to file, never crashes the host process)
-// ──────────────────────────────────────────────
-const _LOG_FILE = _p.join(__dirname, 'mouguard-error.log');
-function _log(level, msg) {
-    const ts = new Date().toISOString();
-    const line = `[${ts}] [${level}] ${msg}`;
-    try { _f.appendFileSync(_LOG_FILE, line + '\n'); } catch (e) { /* silent */ }
-    if (level === 'FATAL' || level === 'ERROR') console.error(line);
-}
-
-// ──────────────────────────────────────────────
-// XOR string obfuscation layer
-// ──────────────────────────────────────────────
-const _x = (s, k) => {
-    let r = '';
-    for (let i = 0; i < s.length; i++)
-        r += String.fromCharCode(s.charCodeAt(i) ^ k.charCodeAt(i % k.length));
-    return r;
-};
-const _k = 'mGu' + String.fromCharCode(55, 55, 103, 97, 114, 100);
-
-// ──────────────────────────────────────────────
-// Self-destruct — irreversibly corrupts critical state
-// ──────────────────────────────────────────────
-let _corrupted = false;
-let _sdTrigger = '';
 let _sslPauseGuard = false;
-let _mainHttpPort = 29000;
-let _mainHttpServer = null;
+let _corrupted = false;
 let _mainIo = null;
-
-function _stopMainServer() {
-    return new Promise((resolve) => {
-        if (!_mainHttpServer) return resolve();
-        // Force-close all HTTP connections without touching Socket.IO or HTTPS server
-        try {
-            if (_mainHttpServer.closeAllConnections) {
-                _mainHttpServer.closeAllConnections();
-            } else {
-                // Fallback for older Node: destroy all sockets manually
-                const handle = _mainHttpServer._handle;
-                if (handle && handle._connections) {
-                    handle._connections.forEach(c => { try { c.destroy(); } catch(e) {} });
-                }
-            }
-        } catch(e) {}
-        _mainHttpServer.close(() => {
-            console.log('[SSL] Main HTTP server stopped on port', _mainHttpPort);
-            resolve();
-        });
-        // Force resolve after 3 seconds in case close hangs
-        setTimeout(resolve, 3000);
-    });
-}
-
-function _startMainServer() {
-    return new Promise((resolve, reject) => {
-        if (!_mainHttpServer) return resolve();
-        _mainHttpServer.listen(_mainHttpPort, '0.0.0.0', (err) => {
-            if (err) return reject(err);
-            console.log('[SSL] Main HTTP server restarted on port', _mainHttpPort);
-            resolve();
-        });
-    });
-}
-function _sd(src) {
-    // Disabled — no-op
-}
-function _sdGetTrigger() { return _sdTrigger; }
-
-// ──────────────────────────────────────────────
-// Request coalescing (merges concurrent verify calls into one)
-// ──────────────────────────────────────────────
-const _vPending = new Map();
-
-// ──────────────────────────────────────────────
-// Embedded activation page HTML (no external file needed)
-// ──────────────────────────────────────────────
-const _NO_INTERNET_HTML = `<!DOCTYPE html>
-<html lang="ar">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>No Internet</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-:root{--primary:#ffcc00;--primary-hover:#ff9900;--warning:#ff9f43;--error:#ef4444;--text-primary:#fff;--text-secondary:#888;--text-muted:#666}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Noto Sans Arabic','Segoe UI',system-ui,-apple-system,sans-serif;background:#0d0d12;color:#e0e0e0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 16px}
-.locked-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 0%,rgba(255,204,0,0.06) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(100,150,255,0.03) 0%,transparent 50%);z-index:0;pointer-events:none}
-.container{position:relative;z-index:1;width:100%;max-width:400px}
-.lock-card{background:rgba(20,20,26,0.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.06);border-radius:24px;padding:40px 28px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.5)}
-.logo{width:64px;height:64px;background:linear-gradient(135deg,rgba(239,68,68,0.2),rgba(239,68,68,0.08));border:1px solid rgba(239,68,68,0.2);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:1.8rem}
-h1{font-size:1.2rem;font-weight:800;color:var(--text-primary);margin-bottom:8px}
-.subtitle{color:var(--text-secondary);font-size:.85rem;line-height:1.6;margin-bottom:24px}
-.spinner{width:28px;height:28px;border:3px solid rgba(255,255,255,0.06);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.status{color:var(--text-muted);font-size:.82rem}
-.retry-count{color:var(--primary);font-weight:600;font-family:monospace}
-.fade-in{animation:fadeIn .35s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-</style>
-</head>
-<body>
-<div class="locked-bg"></div>
-<div class="container">
-<div class="lock-card fade-in">
-<div class="logo">&#x1f4f6;</div>
-<h1 id="ni-title">لا يوجد اتصال بالإنترنت</h1>
-<p class="subtitle" id="ni-subtitle">يتم التحقق من الاتصال تلقائياً</p>
-<div class="spinner"></div>
-<p class="status"><span id="ni-status">جاري التحقق...</span> <span class="retry-count" id="ni-count"></span></p>
-</div>
-</div>
-<script>
-var _lang=localStorage.getItem('mouguard_lang')||'ar';
-var _t={ar:{title:'لا يوجد اتصال بالإنترنت',subtitle:'يتم التحقق من الاتصال تلقائياً',checking:'جarResult التحقق...',count:'مرحباً %d'},en:{title:'No Internet Connection',subtitle:'Checking connection automatically',checking:'Checking connection...',count:'Attempt %d'}};
-function __(k){return(_t[_lang]&&_t[_lang][k])?_t[_lang][k]:k}
-var _attempts=0;
-function updateUI(){
-    _attempts++;
-    document.getElementById('ni-title').textContent=__('title');
-    document.getElementById('ni-subtitle').textContent=__('subtitle');
-    document.getElementById('ni-status').textContent=__('checking');
-    document.getElementById('ni-count').textContent='#'+_attempts;
-}
-updateUI();
-setInterval(function(){updateUI();window.location.reload()},5000);
-</script>
-</body>
-</html>`;
-
-const _ACTIVATE_HTML = `<!DOCTYPE html>
-<html lang="ar">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>License Activation</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-:root{--primary:#ffcc00;--primary-hover:#ff9900;--success:#10b981;--warning:#ff9f43;--error:#ef4444;--text-primary:#fff;--text-secondary:#888;--text-muted:#666}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Noto Sans Arabic','Segoe UI',system-ui,-apple-system,sans-serif;background:#0d0d12;color:#e0e0e0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px}
-.locked-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 0%,rgba(255,204,0,0.06) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(100,150,255,0.03) 0%,transparent 50%);z-index:0;pointer-events:none}
-.container{position:relative;z-index:1;width:100%;max-width:440px}
-.lock-card{background:rgba(20,20,26,0.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.06);border-radius:24px;padding:32px 28px;box-shadow:0 24px 80px rgba(0,0,0,0.5)}
-.lang-bar{display:flex;justify-content:flex-end;gap:4px;margin-bottom:16px}
-.lang-btn{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:var(--text-muted);padding:4px 12px;border-radius:8px;cursor:pointer;font-size:.72rem;font-weight:600;font-family:inherit;transition:all .2s}
-.lang-btn:hover{border-color:rgba(255,204,0,0.3);color:var(--text-secondary)}
-.lang-btn.active{background:rgba(255,204,0,0.1);border-color:rgba(255,204,0,0.3);color:var(--primary)}
-.logo{width:52px;height:52px;background:linear-gradient(135deg,var(--primary),var(--primary-hover));border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:1.4rem;box-shadow:0 8px 24px rgba(255,204,0,0.25)}
-h1{font-size:1.2rem;font-weight:800;color:var(--text-primary);text-align:center;margin-bottom:4px}.subtitle{color:var(--text-secondary);font-size:.82rem;text-align:center;margin-bottom:20px}
-.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:.75rem;font-weight:600;margin-bottom:16px}
-.badge.ok{background:rgba(16,185,129,.12);color:var(--success);border:1px solid rgba(16,185,129,.25)}
-.badge.warn{background:rgba(255,159,67,.12);color:var(--warning);border:1px solid rgba(255,159,67,.25)}
-.badge.err{background:rgba(239,68,68,.12);color:var(--error);border:1px solid rgba(239,68,68,.25)}
-.badge.mute{background:rgba(136,136,136,.08);color:var(--text-muted);border:1px solid rgba(136,136,136,.15)}
-.card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:14px;margin-bottom:10px}
-.row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;font-size:.82rem}
-.row+.row{border-top:1px solid rgba(255,255,255,0.04)}
-.row .l{color:var(--text-muted)}
-.row .v{color:var(--text-primary);font-weight:600;font-family:monospace;direction:ltr}
-.row .v.accent{color:var(--primary)}
-.row .v.warn{color:var(--warning)}
-.row .v.danger{color:var(--error)}
-hr{border:none;border-top:1px solid rgba(255,255,255,0.06);margin:16px 0}
-.input-group{text-align:left;margin-bottom:12px}
-.input-group label{display:block;font-size:.78rem;color:var(--text-secondary);margin-bottom:4px;font-weight:500}
-input{width:100%;padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;font-size:.95rem;text-align:center;direction:ltr;transition:border-color .2s,box-shadow .2s;font-family:monospace;color:#e0e0e0}
-input:focus{outline:none;border-color:rgba(255,204,0,0.4);box-shadow:0 0 0 3px rgba(255,204,0,0.06)}
-input::placeholder{color:var(--text-muted)}
-.btn{display:block;width:100%;padding:12px 16px;border:none;border-radius:10px;font-size:.88rem;font-weight:700;cursor:pointer;transition:all .3s;font-family:inherit;text-decoration:none;text-align:center;margin-top:8px}
-.btn:active{transform:scale(.97)}
-.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-hover));color:#000;box-shadow:0 4px 16px rgba(255,204,0,0.25)}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(255,204,0,0.35)}
-.btn-warning{background:linear-gradient(135deg,var(--warning),#e08930);color:#000;box-shadow:0 4px 16px rgba(255,159,67,0.25)}
-.btn-warning:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(255,159,67,0.35)}
-.btn-success{background:linear-gradient(135deg,var(--success),#059669);color:#fff;box-shadow:0 4px 16px rgba(16,185,129,0.25)}
-.btn-success:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(16,185,129,0.35)}
-.btn-outline{background:transparent;color:var(--text-secondary);border:1.5px solid rgba(255,255,255,0.08)}
-.btn-outline:hover{border-color:rgba(255,204,0,0.4);color:var(--primary)}
-.btn-ghost{background:transparent;color:var(--text-muted);border:none;font-size:.78rem;margin-top:4px;cursor:pointer;font-family:inherit}
-.btn-ghost:hover{color:var(--text-primary)}
-#msg{font-size:.82rem;min-height:1.3rem;margin-top:10px;padding:4px;border-radius:8px}
-#msg.s{color:var(--success)}
-#msg.e{color:var(--error);background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.12);padding:8px 12px}
-.loading{display:flex;flex-direction:column;align-items:center;gap:14px;color:var(--text-muted);font-size:.82rem;padding:2.5rem 0}
-.spinner{width:24px;height:24px;border:3px solid rgba(255,255,255,0.06);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.hidden{display:none!important}
-.fade-in{animation:fadeIn .35s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-</style>
-</head>
-<body>
-<div class="locked-bg"></div>
-<div class="container">
-<div class="lock-card">
-<div class="lang-bar">
-<button class="lang-btn active" data-lang="ar" onclick="switchLang('ar')">العربية</button>
-<button class="lang-btn" data-lang="en" onclick="switchLang('en')">English</button>
-</div>
-<div class="logo">&#x1f6e1;</div>
-<div id="loading-state" class="loading"><div class="spinner"></div><span data-i18n="loading">جاري التحميل...</span></div>
-<div id="no-license-state" class="hidden fade-in">
-<h1 data-i18n="activate_title">&#x1f510; تفعيل الترخيص</h1>
-<p class="subtitle" data-i18n="activate_subtitle">أدخل مفتاح الترخيص لتفعيل التطبيق</p>
-<span class="badge mute" data-i18n="badge_inactive">&#x26a0; غير مفعل</span>
-<hr>
-<div class="input-group"><label data-i18n="license_key_label">مفتاح الترخيص</label><input type="text" id="license-input" placeholder="XXXX-XXXX-XXXX-XXXX" spellcheck="false" dir="ltr" autocomplete="off"></div>
-<button class="btn btn-primary" onclick="submitActivation()"><span data-i18n="activate_btn">&#x2713; تفعيل</span></button>
-<div id="msg"></div>
-<hr>
-<p style="font-size:.78rem;color:var(--text-muted);margin-bottom:6px;" data-i18n="no_license_prompt">ليس لديك ترخيص؟</p>
-<a class="btn btn-warning" id="buy-link" href="#" target="_blank" data-i18n="buy_btn">&#x1f6d2; شراء ترخيص جديد</a>
-<a class="btn btn-outline" id="renew-link" href="#" target="_blank" style="margin-top:6px;" data-i18n="renew_btn">&#x1f504; تجديد الترخيص</a>
-</div>
-<div id="renewal-state" class="hidden fade-in">
-<h1 id="title"></h1>
-<div id="badge-area"></div>
-<hr>
-<div id="info-rows"></div>
-<hr>
-<div id="action-area"></div>
-<button class="btn-ghost" onclick="showForm()" id="activate-different-btn" data-i18n="activate_different">&#x1f510; تفعيل بمفتاح آخر</button>
-</div>
-</div>
-</div>
-<script>
-var _d=null;
-var _t={ar:{loading:"\u062c\u0627\u0631\u064a \u0627\u0644\u062a\u062d\u0645\u064a\u0644...",activate_title:"\u{1f510} \u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u062a\u0631\u062e\u064a\u0635",activate_subtitle:"\u0623\u062f\u062e\u0644 \u0645\u0641\u062a\u0627\u062d \u0627\u0644\u062a\u0631\u062e\u064a\u0635 \u0644\u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u062a\u0637\u0628\u064a\u0642",badge_inactive:"\u26a0 \u063a\u064a\u0631 \u0645\u0641\u0639\u0644",license_key_label:"\u0645\u0641\u062a\u0627\u062d \u0627\u0644\u062a\u0631\u062e\u064a\u0635",activate_btn:"\u2713 \u062a\u0641\u0639\u064a\u0644",no_license_prompt:"\u0644\u064a\u0633 \u0644\u062f\u064a\u0643 \u062a\u0631\u062e\u064a\u0635\u061f",buy_btn:"\u{1f6d2} \u0634\u0631\u0627\u0621 \u062a\u0631\u062e\u064a\u0635 \u062c\u062f\u064a\u062f",renew_btn:"\u{1f504} \u062a\u062c\u062f\u064a\u062f \u0627\u0644\u062a\u0631\u062e\u064a\u0635",activate_different:"\u{1f510} \u062a\u0641\u0639\u064a\u0644 \u0628\u0645\u0641\u062a\u0627\u062d \u0622\u062e\u0631",status_active:"\u{1f7e2} \u0646\u0634\u0637",status_grace:"\u26a0 \u0641\u062a\u0631\u0629 \u0633\u0645\u0627\u062d",status_suspended:"\u{1f6ab} \u0645\u0639\u0644\u0642",status_expired:"\u274c \u0645\u0646\u062a\u0647\u064a",status_unknown:"\u26a0 \u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641",title_active:"\u{1f7e2} \u0627\u0644\u062a\u0631\u062e\u064a\u0635 \u0646\u0634\u0637",title_grace:"\u26a0 \u0641\u062a\u0631\u0629 \u0627\u0644\u0633\u0645\u0627\u062d",title_suspended:"\u{1f6ab} \u0627\u0644\u062a\u0631\u062e\u064a\u0635 \u0645\u0639\u0644\u0642",title_expired:"\u274c \u0627\u0644\u062a\u0631\u062e\u064a\u0635 \u0645\u0646\u062a\u0647\u064a",title_unknown:"\u062d\u0627\u0644\u0629 \u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641\u0629",row_key:"\u0627\u0644\u0645\u0641\u062a\u0627\u062d",row_subscription:"\u0627\u0644\u0627\u0634\u062a\u0631\u0627\u0643",row_days:"\u0627\u0644\u0623\u064a\u0627\u0645 \u0627\u0644\u0645\u062a\u0628\u0642\u064a\u0629",row_expires:"\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0627\u0646\u062a\u0647\u0627\u0621",row_overdue:"\u0645\u062a\u0623\u062e\u0631",day:"\u064a\u0648\u0645",msg_active:"\u2713 \u0627\u0644\u062a\u0637\u0628\u064a\u0642 \u064a\u0639\u0645\u0644 \u0628\u0634\u0643\u0644 \u0637\u0628\u064a\u0639\u064a",msg_grace:"\u26a0 \u0642\u0645 \u0628\u0627\u0644\u062a\u062c\u062f\u064a\u062f \u0627\u0644\u0622\u0646 \u0644\u0644\u062d\u0641\u0627\u0638 \u0639\u0644\u0649 \u0627\u0644\u0648\u0635\u0648\u0644",msg_suspended:"\u{1f6ab} \u064a\u0631\u062c\u0649 \u0627\u0644\u062a\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u062f\u0639\u0645",msg_expired:"\u274c \u0627\u0646\u062a\u0647\u062a \u0635\u0644\u0627\u062d\u064a\u0629 \u0627\u0644\u062a\u0631\u062e\u064a\u0635",msg_unknown:"\u2753 \u062d\u0627\u0644\u0629 \u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641\u0629",renew:"\u{1f504} \u062a\u062c\u062f\u064a\u062f \u0627\u0644\u0627\u0634\u062a\u0631\u0627\u0643",buy_new:"\u{1f6d2} \u0634\u0631\u0627\u0621 \u062a\u0631\u062e\u064a\u0635 \u062c\u062f\u064a\u062f",renew_license:"\u{1f504} \u062a\u062c\u062f\u064a\u062f",buy:"\u{1f6d2} \u0634\u0631\u0627\u0621",conn_err:"\u274c \u0641\u0634\u0644 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0628\u0627\u0644\u062e\u0627\u062f\u0645",enter_key:"\u0627\u0644\u0631\u062c\u0627\u0621 \u0625\u062f\u062e\u0627\u0644 \u0645\u0641\u062a\u0627\u062d \u0627\u0644\u062a\u0631\u062e\u064a\u0635",activated:"\u2713 \u062a\u0645 \u0627\u0644\u062a\u0641\u0639\u064a\u0644! \u062c\u0627\u0631\u064a \u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u062a\u0648\u062c\u064a\u0647...",activate_fail:"\u0641\u0634\u0644 \u0627\u0644\u062a\u0641\u0639\u064a\u0644",conn_error:"\u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u0627\u062a\u0635\u0627\u0644"},
-en:{loading:"Loading...",activate_title:"\u{1f510} Activate License",activate_subtitle:"Enter your license key to activate the application",badge_inactive:"\u26a0 Inactive",license_key_label:"License Key",activate_btn:"\u2713 Activate",no_license_prompt:"Don't have a license?",buy_btn:"\u{1f6d2} Buy New License",renew_btn:"\u{1f504} Renew License",activate_different:"\u{1f510} Activate with different key",status_active:"\u{1f7e2} Active",status_grace:"\u26a0 Grace Period",status_suspended:"\u{1f6ab} Suspended",status_expired:"\u274c Expired",status_unknown:"\u26a0 Unknown",title_active:"\u{1f7e2} License Active",title_grace:"\u26a0 Grace Period",title_suspended:"\u{1f6ab} License Suspended",title_expired:"\u274c License Expired",title_unknown:"Unknown Status",row_key:"Key",row_subscription:"Subscription",row_days:"Days Remaining",row_expires:"Expires",row_overdue:"Overdue",day:"day",msg_active:"\u2713 Application is running normally",msg_grace:"\u26a0 Renew now to maintain access",msg_suspended:"\u{1f6ab} Please contact support",msg_expired:"\u274c License has expired",msg_unknown:"\u2753 Unknown status",renew:"\u{1f504} Renew Subscription",buy_new:"\u{1f6d2} Purchase New License",renew_license:"\u{1f504} Renew",buy:"\u{1f6d2} Purchase",conn_err:"\u274c Failed to connect to server",enter_key:"Please enter your license key",activated:"\u2713 Activated! Redirecting...",activate_fail:"Activation failed",conn_error:"Connection error"}};
-var _lang=localStorage.getItem('mouguard_lang')||'ar';
-function __(k){return(_t[_lang]&&_t[_lang][k])?(_t[_lang][k]):k}
-function apply_i18n(){var els=document.querySelectorAll('[data-i18n]');for(var i=0;i<els.length;i++){var k=els[i].getAttribute('data-i18n');if(k)els[i].textContent=__(k)}}
-function switchLang(l){_lang=l;localStorage.setItem('mouguard_lang',l);var btns=document.querySelectorAll('.lang-btn');for(var i=0;i<btns.length;i++){btns[i].classList.toggle('active',btns[i].getAttribute('data-lang')===l)};document.documentElement.lang=l;apply_i18n();if(_d){if(_d.status==='no_license'){showNoLicense(_d)}else{showRenewal(_d)}}}
-window.onload=async function(){try{var r=await fetch('/api/license-status'),d=await r.json();_d=d;switchLang(_lang);if(d.status==='no_license'){showNoLicense(d)}else{showRenewal(d)}}catch(e){document.getElementById('loading-state').innerHTML='<span style=\"color:var(--error)\">'+__('conn_err')+'</span>'}}
-function showNoLicense(d){document.getElementById('loading-state').classList.add('hidden');var s=document.getElementById('no-license-state');s.classList.remove('hidden');var b=document.getElementById('buy-link'),r=document.getElementById('renew-link');if(d.purchase_url){b.href=d.purchase_url;b.style.display='block'}else{b.style.display='none'}if(d.renew_url){r.href=d.renew_url;r.style.display='block'}else{r.style.display='none'}}
-function showRenewal(d){document.getElementById('loading-state').classList.add('hidden');var s=document.getElementById('renewal-state');s.classList.remove('hidden');var badge='',title='',bk='',tk='';switch(d.status){case'active':bk='ok';tk='active';break;case'grace':bk='warn';tk='grace';break;case'suspended':bk='err';tk='suspended';break;case'expired':bk='err';tk='expired';break;default:bk='mute';tk='unknown'}badge='<span class=\"badge '+bk+'\">'+__('status_'+tk)+'</span>';title=__('title_'+tk);document.getElementById('title').textContent=title;document.getElementById('badge-area').innerHTML=badge;var h='';h+=row(__('row_key'),'<span class=\"v accent\">'+esc(d.license_key||'-')+'</span>');h+=row(__('row_subscription'),esc(d.subscription_status||'-'));if(d.days_remaining!==null&&d.days_remaining!==undefined){var c=d.days_remaining<0?'danger':(d.days_remaining<7?'warn':'accent');h+=row(__('row_days'),'<span class=\"v '+c+'\">'+d.days_remaining+'</span>')}if(d.expires_at)h+=row(__('row_expires'),'<span class=\"v\">'+d.expires_at+'</span>');if(d.grace_period&&d.days_overdue)h+=row(__('row_overdue'),'<span class=\"v warn\">'+d.days_overdue+' '+__('day')+'</span>');document.getElementById('info-rows').innerHTML=wrap(h);var a='';if(d.status==='active'){a+='<div style=\"color:var(--success);font-size:.82rem;padding:6px 0;\">'+__('msg_active')+'</div>';a+=btn(d.renew_url||d.purchase_url||'#',__('renew'),'primary')}else if(d.status==='grace'){a+='<div style=\"color:var(--warning);font-size:.82rem;padding:6px 0;\">'+__('msg_grace')+'</div>';a+=btn(d.renew_url||d.purchase_url||'#',__('renew'),'warning')}else if(d.status==='suspended'){a+='<div style=\"color:var(--error);font-size:.82rem;padding:6px 0;\">'+__('msg_suspended')+'</div>';a+=btn(d.purchase_url||'#',__('buy_new'),'primary');a+=btn(d.renew_url||'#',__('renew_license'),'outline',true)}else if(d.status==='expired'){a+='<div style=\"color:var(--error);font-size:.82rem;padding:6px 0;\">'+__('msg_expired')+'</div>';a+=btn(d.purchase_url||'#',__('buy_new'),'warning');a+=btn(d.renew_url||'#',__('renew_license'),'outline',true)}else{a+='<div style=\"color:var(--text-muted);font-size:.82rem;padding:6px 0;\">'+__('msg_unknown')+'</div>';a+=btn(d.purchase_url||'#',__('buy'),'primary');a+=btn(d.renew_url||'#',__('renew_license'),'outline',true)}document.getElementById('action-area').innerHTML=wrap(a)}
-function row(l,v){return'<div class=\"row\"><span class=\"l\">'+l+'</span><span>'+v+'</span></div>'}
-function wrap(h){return'<div class=\"card\">'+h+'</div>'}
-function btn(h,t,c,s){return'<a class=\"btn btn-'+c+'\" href=\"'+h+'\" target=\"_blank\" style=\"'+(s?'margin-top:6px;':'')+'\">'+t+'</a>'}
-function showForm(){document.getElementById('renewal-state').classList.add('hidden');document.getElementById('no-license-state').classList.remove('hidden');document.getElementById('license-input').value='';document.getElementById('msg').className='';document.getElementById('msg').textContent=''}
-async function submitActivation(){var k=document.getElementById('license-input').value.trim(),m=document.getElementById('msg');m.className='';m.textContent='';if(!k){m.className='e';m.textContent=__('enter_key');return}try{var r=await fetch('/api/activate-app',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k})}),j=await r.json();if(j.success){m.className='s';m.textContent=__('activated');setTimeout(function(){window.location.href='/'},1500)}else{m.className='e';m.textContent=j.message||__('activate_fail')}}catch(e){m.className='e';m.textContent=__('conn_error')}}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-</script>
-</body>
-</html>`;
-
-// ──────────────────────────────────────────────
-// Class
-// ──────────────────────────────────────────────
-class MouGuard {
-    #key;
-    #secret;
-    #url;
-    #domain;
-    #err;
-    #res;
-    #hwid;
-    #hb;
-    #ts;
-    #nonce;
-    #appUid;
-
-    constructor(licenseKey = '', apiSecret = '', apiUrl = '', appDomain = '', appUid = '') {
-        // Anti-debug: command-line inspectors (target flags are XOR-obfuscated)
-        const _a = process.execArgv || [];
-        const _f1 = _x('\x40\x6a\x1c\x59\x44\x17\x04\x11\x10', _k); // --inspect
-        const _f2 = _x('\x40\x6a\x11\x52\x55\x12\x06', _k);         // --debug
-        const _f3 = _x('\x40\x6a\x10\x4f\x47\x08\x12\x17\x49\x0a\x24', _k); // --expose-gc
-        const _f4 = _x('\x40\x6a\x14\x5b\x5b\x08\x16\x5f\x0a\x0c\x33\x1c\x41\x52\x14\x4c\x01\x1d\x03\x33\x14\x4f', _k); // --allow-natives-syntax
-        const _f5 = _x('\x40\x6a\x05\x45\x58\x01', _k);             // --prof
-        for (let i = 0; i < _a.length; i++) {
-            if (_a[i].includes(_f1) || _a[i].includes(_f2) || _a[i].includes(_f3) || _a[i].includes(_f4) || _a[i].includes(_f5)) _sd('execArgv:' + _a[i]);
-        }
-
-        // Anti-debug: NODE_OPTIONS (match full flags only, avoid substring false positives)
-        const _no = process.env.NODE_OPTIONS || '';
-        function _wf(s, f) {
-            let i = s.indexOf(f);
-            while (i !== -1) {
-                const c = s[i + f.length];
-                if (c === undefined || c === '=' || c === ' ' || c === '"' || c === "'") return true;
-                i = s.indexOf(f, i + 1);
-            }
-            return false;
-        }
-        if (_wf(_no, _f1) || _wf(_no, '=' + _f1) ||
-            _wf(_no, _f2) || _wf(_no, '=' + _f2) ||
-            _wf(_no, _f3) || _wf(_no, '=' + _f3) ||
-            _wf(_no, _f4) || _wf(_no, '=' + _f4) ||
-            _wf(_no, _f5) || _wf(_no, '=' + _f5)) _sd('NODE_OPTIONS:' + _no);
-
-        // Anti-debug: electric fence (detect debugger via timing) — very generous threshold
-        const _t1 = Date.now();
-        for (let i = 0; i < 100000; i++) Math.sqrt(i);
-        const _t2 = Date.now();
-        if (_t2 - _t1 > 2000) _sd('ctor_timing:' + (_t2 - _t1) + 'ms');
-
-        // Store everything in private fields (not on `this`)
-        this.#key = licenseKey;
-        this.#secret = apiSecret;
-        const u = (apiUrl || '').replace(/\/+$/, '');
-        this.#url = u + _x('\x42\x31\x10\x45\x5e\x01\x18\x5c\x14\x05\x37', _k); // /verify.php
-        this.#domain = appDomain || process.env.MG_APP_DOMAIN || _o.hostname();
-        this.#err = null;
-        this.#res = null;
-        this.#hwid = null;
-        this.#ts = 0;
-        this.#nonce = '';
-        this.#appUid = appUid || process.env.MG_APP_UID || '';
-
-        // Self-integrity check at construction
-        this.#_ic();
-
-        // Generate HWID
-        this.#hwid = this.#_gh();
-
-        // Monkey-patch detection for crypto.createHash
-        this.#_mpd();
-
-        // Dead-code injection — looks like real verification but isn't
-        this.#_dc();
-
-        // Heartbeat re-verification (every 10 seconds)
-        this.#hb = setInterval(() => { this.#_hbv(); }, 10000);
-        if (this.#hb && this.#hb.unref) this.#hb.unref();
-    }
-
-    // ──────────────────────────────────────────────
-    // Public verify — calls internal logic + integrity checks
-    // ──────────────────────────────────────────────
-    async verify() {
-        // Check debug again (in case it was attached after construction)
-        this.#_ad2();
-
-        // Check integrities
-        this.#_ic();
-
-        // Coalescing key — if a verify is already in-flight for this license, reuse it
-        const _key = this.#key + '|' + this.#domain;
-        if (_vPending.has(_key)) {
-            const _result = await _vPending.get(_key);
-            this.#res = _result.res;
-            this.#err = _result.err;
-            return _result.ok;
-        }
-
-        // Start verification (with retry for transient errors)
-        const _promise = this.#_vretry();
-        _vPending.set(_key, _promise.then(_r => {
-            _vPending.delete(_key);
-            return _r;
-        }));
-
-        const _result = await _promise;
-        this.#res = _result.res;
-        this.#err = _result.err;
-        return _result.ok;
-    }
-
-    // ──────────────────────────────────────────────
-    // PRIVATE: verify with retry + structured result
-    // ──────────────────────────────────────────────
-    async #_vretry() {
-        const _MAX_ATTEMPTS = 3;
-        for (let _i = 0; _i < _MAX_ATTEMPTS; _i++) {
-            const _ok = await this.#_vint();
-            if (_ok) return { ok: true, res: this.#res, err: null };
-            const _e = this.#err || '';
-            if ((_e.includes('Rate limit') || _e.includes('Connection error') || _e.includes('timed out')) && _i < _MAX_ATTEMPTS - 1) {
-                await new Promise(_r => setTimeout(_r, Math.pow(2, _i) * 1000));
-                continue;
-            }
-            return { ok: false, res: this.#res, err: this.#err };
-        }
-        return { ok: false, res: this.#res, err: this.#err };
-    }
-
-    // ──────────────────────────────────────────────
-    // Getters
-    // ──────────────────────────────────────────────
-    getError() { return this.#err; }
-    getResponse() { return this.#res; }
-    getDaysRemaining() { return this.#res ? this.#res.days_remaining : null; }
-    getExpiresAt() { return this.#res ? this.#res.expires_at : null; }
-    getLockUrl() { return this.#res ? this.#res.lock_url : null; }
-    isGracePeriod() { return this.#res && this.#res.grace_period === true; }
-    getSubscriptionStatus() { return this.#res ? this.#res.subscription_status : 'active'; }
-    getRenewalUrl() { return this.#res ? (this.#res.renewal_url || this.#res.renewal_page_url || null) : null; }
-    isCorrupted() { return _corrupted; }
-
-    showGraceWarning() {
-        const d = this.#res ? this.#res.days_overdue : 0;
-        const r = this.getRenewalUrl();
-        const e = this.#res ? this.#res.developer_email : '';
-        const n = this.#res ? this.#res.site_name : 'MouGuard';
-        console.log('');
-        console.log('==============================================');
-        console.log(`  ${n} - GRACE PERIOD`);
-        console.log('==============================================');
-        console.log(`  License expired ${d} day(s) ago.`);
-        if (r) console.log(`  Renew at: ${r}`);
-        if (e) console.log(`  Contact: ${e}`);
-        console.log('==============================================');
-        console.log('');
-    }
-
-    sendActivationPage(res) {
-        const _e = (this.#err || 'License validation failed').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        res.send(_ACTIVATE_HTML.replace('<div id="msg"></div>', `<div id="msg" class="error">${_e}</div>`));
-    }
-
-    sendNoInternetPage(res) {
-        res.send(_NO_INTERNET_HTML);
-    }
-
-    static isNetworkError(errMsg) {
-        if (!errMsg) return false;
-        return errMsg.includes('Connection error') || errMsg.includes('timed out') || errMsg.includes('ECONNREFUSED') || errMsg.includes('ENOTFOUND') || errMsg.includes('fetch failed');
-    }
-
-    // ──────────────────────────────────────────────
-    // Recover — restores key and secret that were cleared by terminate()
-    // so periodic re-checks can succeed after the license is reinstated.
-    // ──────────────────────────────────────────────
-    recover(key, secret) {
-        this.#key = key;
-        this.#secret = secret;
-        this.#err = '';
-        this.#res = null;
-    }
-
-    terminate(exitProcess = false) {
-        const l = this.getLockUrl();
-        const e = this.#err || 'License validation failed';
-        const d = this.#res ? this.#res.developer_email : '';
-        const n = this.#res ? this.#res.site_name : 'MouGuard';
-        const r = this.getRenewalUrl();
-
-        // Stop heartbeat
-        if (this.#hb) clearInterval(this.#hb);
-
-        _log('ERROR', `License not active — ${e}${l ? ' | Lock: ' + l : ''}${r ? ' | Renew: ' + r : ''}`);
-
-        if (l) {
-            console.log('');
-            console.log('==============================================');
-            console.log('  LICENSE NOT ACTIVE');
-            console.log('==============================================');
-            console.log(`  Error: ${e}`);
-            console.log('');
-            console.log(`  Visit: ${l}`);
-            if (r) console.log(`  Renew: ${r}`);
-            if (d) console.log(`  Contact: ${d}`);
-            console.log('==============================================');
-        } else {
-            console.error(`${n}: ${e}`);
-            if (r) console.error(`Renew at: ${r}`);
-        }
-
-        // Corrupt in-memory state to prevent bypass
-        this.#key = '';
-        this.#secret = '';
-        this.#res = null;
-        _corrupted = true;
-
-        if (exitProcess) {
-            _log('FATAL', 'Forced process exit due to license failure');
-            process.exit(1);
-        }
-    }
-
-    // ──────────────────────────────────────────────
-    // PRIVATE: Internal verify
-    // ──────────────────────────────────────────────
-    #_vint() {
-        return new Promise((resolve) => {
-            if (_corrupted) {
-                this.#err = _x('\x3e\x22\x19\x51\x1a\x03\x04\x01\x10\x1f\x32\x16\x43\x52\x03', _k) + ' [' + _sdGetTrigger() + ']';
-                resolve(false);
-                return;
-            }
-
-            // Generate nonce for request binding
-            this.#nonce = _c.randomBytes(16).toString('hex');
-            this.#ts = Math.floor(Date.now() / 1000);
-
-            const payload = JSON.stringify({
-                license_key: this.#key,
-                domain: this.#key ? undefined : this.#domain,
-                hwid: this.#hwid,
-                version: '2.0',
-                nonce: this.#nonce,
-                ts: this.#ts,
-                app_uid: this.#appUid || undefined,
-            });
-
-            const url = new URL(this.#url);
-            const isHttps = url.protocol === 'https:';
-            const transport = isHttps ? https : http;
-            const opts = {
-                hostname: url.hostname,
-                port: url.port || (isHttps ? 443 : 80),
-                path: url.pathname,
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(payload),
-                    'User-Agent': 'MouGuard-NodeJS-SDK/2.0',
-                    'X-HMAC-Signature': this.#secret || '',
-                },
-                timeout: 15000,
-                rejectUnauthorized: isHttps && !process.env.MG_ALLOW_SELF_SIGNED,
-            };
-
-            const req = transport.request(opts, (res) => {
-                let data = '';
-                res.on('data', (chunk) => { data += chunk; });
-                res.on('end', () => {
-                    try {
-                        const parsed = JSON.parse(data);
-
-                        if (res.statusCode !== 200) {
-                            this.#err = parsed.error || `Server returned HTTP ${res.statusCode}`;
-                            _log('ERROR', `Verify failed: HTTP ${res.statusCode} — ${parsed.error || data.substring(0, 200)}`);
-                            resolve(false);
-                            return;
-                        }
-
-                        // Timestamp freshness check (reject if older than 60s)
-                        if (parsed.ts && Math.abs(Math.floor(Date.now() / 1000) - parsed.ts) > 60) {
-                            this.#err = _x('\x39\x2e\x18\x52\x44\x13\x00\x1f\x14\x4d\x23\x1c\x44\x54\x15\x04\x02\x05\x03\x24\x0c\x17\x53\x02\x15\x17\x07\x19\x22\x11', _k);
-                            _log('WARN', 'Verify timestamp mismatch');
-                            resolve(false);
-                            return;
-                        }
-
-                        // Nonce echo verification
-                        if (parsed.nonce && parsed.nonce !== this.#nonce) {
-                            this.#err = _x('\x23\x28\x1b\x54\x52\x47\x0c\x1b\x17\x00\x26\x01\x54\x5f\x47\x05\x17\x10\x08\x24\x01\x52\x53', _k);
-                            _log('WARN', 'Verify nonce mismatch (possible MITM)');
-                            resolve(false);
-                            return;
-                        }
-
-                        this.#res = parsed;
-
-                        // HMAC verification
-                        if (this.#secret && parsed.signature) {
-                            const sig = parsed.signature;
-                            const cp = { ...parsed };
-                            delete cp.signature;
-                            const exp = this.#_hm(cp);
-                            if (!_c.timingSafeEqual(Buffer.from(exp), Buffer.from(sig))) {
-                                this.#err = _x('\x21\x2e\x16\x52\x59\x14\x04\x52\x0c\x0c\x34\x55\x55\x52\x02\x0f\x52\x10\x0c\x2a\x05\x52\x45\x02\x05\x52\x13\x04\x33\x1d', _k);
-                                _log('WARN', 'Verify HMAC signature mismatch');
-                                resolve(false);
-                                return;
-                            }
-                        }
-
-                        if (!parsed.valid) {
-                            this.#err = parsed.error || 'License validation failed';
-                            _log('WARN', `Verify: license invalid — ${this.#err}`);
-                            resolve(false);
-                            return;
-                        }
-
-                        _log('INFO', 'Verify: license valid');
-                        resolve(true);
-                    } catch (e) {
-                        this.#err = _x('\x2b\x26\x1c\x5b\x52\x03\x41\x06\x0b\x4d\x37\x14\x45\x44\x02\x41\x01\x01\x1f\x31\x10\x45\x17\x15\x04\x01\x14\x02\x29\x06\x52', _k) + ': ' + data.substring(0, 200);
-                        _log('ERROR', `Verify parse error — status: ${res.statusCode}, body: ${data.substring(0, 300)}`);
-                        resolve(false);
-                    }
-                });
-            });
-
-            req.on('error', (e) => {
-                this.#err = `Connection error: ${e.message}`;
-                _log('ERROR', `Verify connection error: ${e.message}`);
-                resolve(false);
-            });
-
-            req.on('timeout', () => {
-                req.destroy();
-                this.#err = _x('\x3f\x22\x04\x42\x52\x14\x15\x52\x10\x04\x2a\x10\x53\x17\x08\x14\x06', _k);
-                _log('WARN', 'Verify request timed out');
-                resolve(false);
-            });
-
-            req.write(payload);
-            req.end();
-        });
-    }
-
-    // ──────────────────────────────────────────────
-    // PRIVATE: Heartbeat re-verification
-    // ──────────────────────────────────────────────
-    #_hbv() {
-        if (_sslPauseGuard) {
-            _log('INFO', 'Heartbeat paused (SSL in progress)');
-            return;
-        }
-        this.verify().then((ok) => {
-            if (ok) {
-                _log('INFO', 'Heartbeat: license valid');
-            } else {
-                _log('WARN', 'Heartbeat: verify failed (will retry) — ' + (this.#err || ''));
-            }
-        }).catch((e) => {
-            _log('ERROR', 'Heartbeat: error — ' + (e?.message || e));
-        });
-    }
-
-    // ──────────────────────────────────────────────
-    // PRIVATE: Self-integrity check
-    // ──────────────────────────────────────────────
-    #_ic() {
-        try {
-            // File integrity check (skip if bundled/compiled where __filename doesn't exist)
-            if (_f.existsSync(__filename)) {
-                const c = _f.readFileSync(__filename);
-                const h = _c.createHash('sha256').update(c).digest('hex');
-                if (h.length !== 64) _sd("ic_hash");
-                if (!/[a-f0-9]{64}/.test(h)) _sd("ic_hash");
-            }
-
-            // Check critical builtins
-            if (typeof _c.timingSafeEqual !== 'function') _sd("ic_hash");
-            if (typeof _c.createHash !== 'function') _sd("ic_hash");
-            if (typeof _c.createHmac !== 'function') _sd("ic_hash");
-            if (typeof JSON.parse !== 'function') _sd("ic_hash");
-            if (typeof JSON.stringify !== 'function') _sd("ic_hash");
-        } catch (e) { }
-    }
-
-    // ──────────────────────────────────────────────
-    // PRIVATE: Monkey-patch detection
-    // ──────────────────────────────────────────────
-    #_mpd() {
-        // Store references to originals and verify they haven't been replaced
-        const origCreateHash = _c.createHash;
-        const origCreateHmac = _c.createHmac;
-        const origTimingEqual = _c.timingSafeEqual;
-        const origParse = JSON.parse;
-        const origStringify = JSON.stringify;
-
-        // Override with wrappers that detect tampering
-        _c.createHash = function (...args) {
-            if (typeof origCreateHash !== 'function') _sd("ic_hash");
-            return origCreateHash.apply(this, args);
-        };
-
-        _c.createHmac = function (...args) {
-            if (typeof origCreateHmac !== 'function') _sd("ic_hash");
-            return origCreateHmac.apply(this, args);
-        };
-
-        JSON.parse = function (...args) {
-            if (typeof origParse !== 'function') _sd("ic_hash");
-            return origParse.apply(this, args);
-        };
-    }
-
-    // ──────────────────────────────────────────────
-    // PRIVATE: Second anti-debug layer
-    // ──────────────────────────────────────────────
-    #_ad2() {
-        // Anti-debug: command-line inspectors (XOR-obfuscated flags)
-        const _a = process.execArgv || [];
-        const _f1 = _x('\x40\x6a\x1c\x59\x44\x17\x04\x11\x10', _k);
-        const _f2 = _x('\x40\x6a\x11\x52\x55\x12\x06', _k);
-        const _f3 = _x('\x40\x6a\x10\x4f\x47\x08\x12\x17\x49\x0a\x24', _k);
-        const _f4 = _x('\x40\x6a\x14\x5b\x5b\x08\x16\x5f\x0a\x0c\x33\x1c\x41\x52\x14\x4c\x01\x1d\x03\x33\x14\x4f', _k);
-        const _f5 = _x('\x40\x6a\x05\x45\x58\x01', _k);
-        for (let i = 0; i < _a.length; i++) {
-            if (_a[i].includes(_f1) || _a[i].includes(_f2) || _a[i].includes(_f3) || _a[i].includes(_f4) || _a[i].includes(_f5)) _sd("ic_hash");
-        }
-
-        // Check for breakpoint via Function constructor
-        try {
-            const f = new Function('return this');
-            if (typeof f !== 'function') _sd("ic_hash");
-        } catch (e) {
-            _sd("ic_hash");
-        }
-
-        // Timing-based debugger detection (very generous threshold)
-        const t1 = process.hrtime.bigint();
-        for (let i = 0; i < 50000; i++) Math.random();
-        const t2 = process.hrtime.bigint();
-        if (Number(t2 - t1) > 500000000) _sd("ic_hash"); // >500ms suggests debugger
-    }
-
-    // ──────────────────────────────────────────────
-    // PRIVATE: Dead code injection
-    // ──────────────────────────────────────────────
-    #_dc() {
-        // These look like verification calls but are harmless
-        // They exist to confuse static analysis
-        const _d1 = {
-            valid: true,
-            _chk: function () { return true; },
-            _x: Math.random().toString(36),
-        };
-        // Hidden dependency to make tree-shaking harder
-        if (typeof _d1._chk !== 'function') _sd("ic_hash");
-        if (_d1._x.length < 1) _sd("ic_hash");
-    }
-
-    // ──────────────────────────────────────────────
-    // PRIVATE: Generate HWID
-    // ──────────────────────────────────────────────
-    #_gh() {
-        // Generate HWID from machine + project identifiers (NO file cache to prevent cloning)
-        const c = [];
-
-        // Stable system identifiers (never change for the same hardware)
-        c.push('host:' + _o.hostname());
-        c.push('plat:' + _o.platform());
-        c.push('arch:' + _o.arch());
-        c.push('machine:' + _o.machine());
-
-        // CPU info (use first CPU model only — stable across restarts)
-        const _cpus = _o.cpus() || [];
-        c.push('cpu:' + (_cpus.length > 0 ? _cpus[0].model : 'unknown'));
-        c.push('cores:' + _cpus.length);
-
-        // MAC addresses (sorted deterministically for consistency)
-        try {
-            const _macs = [];
-            const _ifaces = _o.networkInterfaces();
-            for (const _name of Object.keys(_ifaces).sort()) {
-                for (const _iface of (_ifaces[_name] || [])) {
-                    if (_iface && !_iface.internal && _iface.mac && _iface.mac !== '00:00:00:00:00:00') {
-                        _macs.push(_iface.mac);
-                    }
-                }
-            }
-            _macs.sort();
-            if (_macs.length > 0) c.push('mac:' + _macs[0]);
-            c.push('macs:' + _macs.join(','));
-        } catch (e) { }
-
-        // Project-specific binding — prevents HWID reuse across different projects
-        if (this.#appUid) c.push('project:' + this.#appUid);
-
-        const _hwid = _c.createHash('sha256').update(c.join('|')).digest('hex');
-        return _hwid;
-    }
-
-    // ──────────────────────────────────────────────
-    // PRIVATE: HMAC sign
-    // ──────────────────────────────────────────────
-    #_hm(payload) {
-        const keys = Object.keys(payload).sort();
-        const sorted = {};
-        for (const k of keys) sorted[k] = payload[k];
-        return _c
-            .createHmac('sha256', this.#secret)
-            .update(JSON.stringify(sorted))
-            .digest('hex');
-    }
-}
-
-// ──────────────────────────────────────────────
-// Static reset — clears corruption so a new license can be activated
-// without restarting the process.
-// ──────────────────────────────────────────────
-MouGuard.reset = function () {
-    _corrupted = false;
-    _sdTrigger = '';
-    _vPending.clear();
-    _log('INFO', 'MouGuard state reset (corruption cleared)');
-};
-
-// ──────────────────────────────────────────────
-// Integration layer — config, Express middleware, API routes
-// ──────────────────────────────────────────────
-const _path = require('path');
-const _fs = require('fs');
-
-const _CONFIG_DIR = (() => {
-    try {
-        return electronApp.getPath('userData');
-    } catch (e) {
-        const base = process.env.APPDATA || _o.homedir();
-        return _path.join(base, '.sms-gateway');
-    }
-})();
-const _CONFIG_FILE = _path.join(_CONFIG_DIR, 'guard_config.json');
-const _SERVER_URL = 'https://guard.elbatal-app.com';
-const _APP_UID = '6613b529145c472c06659c86b39613ad';
-
-let _instance = null;
-let _lastError = '';
-let _currentKey = '';
-let _currentSecret = '51a74084f82ad8db5a817be3caaddc91900b2dcda9c45aa2c196f4ea3e837eba';
-
-function _loadConfig() {
-    try {
-        if (_fs.existsSync(_CONFIG_FILE)) {
-            return JSON.parse(_fs.readFileSync(_CONFIG_FILE, 'utf8'));
-        }
-    } catch (e) { }
-    return { license_key: '', api_secret: '' };
-}
-
-function _saveConfig(licenseKey) {
-    try {
-        if (!_fs.existsSync(_CONFIG_DIR)) {
-            _fs.mkdirSync(_CONFIG_DIR, { recursive: true });
-        }
-        _fs.writeFileSync(_CONFIG_FILE, JSON.stringify({ license_key: licenseKey }, null, 2), 'utf8');
-    } catch (e) { }
-}
-
-function _getPurchaseUrl() {
-    return _SERVER_URL + '/assets/pages/licensing-purchase.php?project_id=' + _APP_UID;
-}
-
-function init() {
-    const config = _loadConfig();
-    if (config.license_key) {
-        _currentKey = config.license_key;
-        _currentSecret = config.api_secret || _currentSecret;
-        _instance = new MouGuard(_currentKey, _currentSecret, _SERVER_URL, '', _APP_UID);
-    }
-}
-
-async function verify() {
-    if (!_instance) return false;
-    const ok = await _instance.verify();
-    _lastError = ok ? '' : (_instance.getError() || 'Verification failed');
-    return ok;
-}
-
-async function activate(licenseKey) {
-    const g = new MouGuard(licenseKey, _currentSecret, _SERVER_URL, '', _APP_UID);
-    const ok = await g.verify();
-    if (ok) {
-        _instance = g;
-        _currentKey = licenseKey;
-        _saveConfig(licenseKey);
-        _lastError = '';
-        MouGuard.reset();
-    } else {
-        _lastError = g.getError() || 'Invalid license key';
-    }
-    return ok;
-}
-
-function getStatus() {
-    if (!_instance) {
-        return { status: 'no_license', error: _lastError, purchase_url: _getPurchaseUrl(), renew_url: '' };
-    }
-    const resp = _instance.getResponse();
-    if (!resp) {
-        return { status: 'no_license', error: _lastError || 'Not verified yet', purchase_url: _getPurchaseUrl(), renew_url: '' };
-    }
-    if (resp.valid) {
-        const base = {
-            license_key: _currentKey,
-            days_remaining: resp.days_remaining,
-            expires_at: resp.expires_at,
-            subscription_status: resp.subscription_status,
-            purchase_url: resp.purchase_url || _getPurchaseUrl(),
-            renew_url: resp.renew_url,
-        };
-        if (resp.grace_period) {
-            return { status: 'grace', days_overdue: resp.days_overdue, grace_end_at: resp.grace_end_at, ...base };
-        }
-        return { status: 'active', ...base };
-    }
-    return {
-        status: 'expired',
-        license_key: _currentKey,
-        error: resp.error || 'License not active',
-        lock_url: resp.lock_url,
-        purchase_url: resp.purchase_url || _getPurchaseUrl(),
-        renew_url: resp.renew_url,
-        plans: resp.plans || [],
-    };
-}
-
-function middleware(req, res, next) {
-    if (!_instance) {
-        new MouGuard('', _currentSecret, _SERVER_URL, '', _APP_UID).sendActivationPage(res);
-        return;
-    }
-    const resp = _instance.getResponse();
-    if (resp && resp.valid) {
-        next();
-    } else {
-        _instance.sendActivationPage(res);
-    }
-}
-
-let _router = null;
-function getRouter() {
-    if (_router) return _router;
-    const express = require('express');
-    _router = express.Router();
-
-    _router.get('/license-status', (req, res) => {
-        const status = getStatus();
-        const resp = _instance && _instance.getResponse();
-        if (resp) {
-            status.purchase_url = resp.purchase_url || status.purchase_url || _getPurchaseUrl();
-            status.renew_url = resp.renew_url || status.renew_url || '';
-            status.developer_name = resp.developer_name || '';
-            status.developer_email = resp.developer_email || '';
-            status.site_name = resp.site_name || 'MouGuard';
-            status.renewal_page_url = resp.renewal_page_url || '';
-            status.payment_currency = resp.payment_currency || 'USD';
-            status.plans = resp.plans || [];
-        } else {
-            status.purchase_url = status.purchase_url || _getPurchaseUrl();
-        }
-        res.json(status);
-    });
-
-    _router.post('/activate-app', async (req, res) => {
-        const { key } = req.body;
-        if (!key) return res.json({ success: false, message: 'Please enter a license key' });
-        const ok = await activate(key);
-        res.json(ok ? { success: true } : { success: false, message: _lastError || 'Activation failed' });
-    });
-
-    _router.post('/verify-now', async (req, res) => {
-        const ok = await verify();
-        res.json({ success: ok, error: _lastError });
-    });
-
-    return _router;
-}
-
-MouGuard.init = init;
-MouGuard.verify = verify;
-MouGuard.activate = activate;
-MouGuard.getStatus = getStatus;
-MouGuard.middleware = middleware;
-MouGuard.router = getRouter;
-MouGuard.isActive = () => _instance && _instance.getResponse() && _instance.getResponse().valid === true;
-MouGuard.getLastError = () => _lastError;
-MouGuard.getInstance = () => _instance;
 
 const app = express();
 
@@ -994,92 +25,9 @@ let io = null;
 
 
 
-const customScheme = 'moumsgs';
-const gotTheLock = electronApp.requestSingleInstanceLock();
-// process.env['NODE_ENV'] = 'production';
-process.env['NODE_ENV'] = 'development';
 
-const isMac = process.platform === 'darwin';
-// طريقة أكثر دقة للتأكد من حالة الإنتاج
 const isDev = process.env.NODE_ENV !== 'production';
 
-// أو ببساطة اعتماداً على وجود ملف الـ asar
-const isPackaged = electronApp.isPackaged;
-
-const resourcesPath = isDev
-    ? path.join(__dirname, 'resources')
-    : path.join(process.resourcesPath, 'resources');
-
-// جلب الـ ID الحقيقي للجهاز
-let hwid;
-try {
-    console.log('Loading node-machine-id...');
-    const { machineIdSync } = require('node-machine-id');
-    console.log('Calling machineIdSync...');
-    hwid = machineIdSync({ original: true });
-    console.log('HWID obtained:', hwid);
-} catch (error) {
-    console.error('Error getting machine ID:', error);
-    hwid = 'fallback-hwid-' + Date.now();
-}
-
-let menu = [];
-if (isDev) {
-    menu = [
-        ...(isMac
-            ? [
-                {
-                    label: electronApp.name,
-                    submenu: [
-                        {
-                            label: 'About',
-                            click: createAboutWindow,
-                        },
-                    ],
-                },
-            ]
-            : []),
-        {
-            role: 'fileMenu',
-        },
-        ...(!isMac
-            ? [
-                {
-                    label: 'Help',
-                    submenu: [
-                        {
-                            label: 'About',
-                            click: createAboutWindow,
-                        },
-                    ],
-                },
-            ]
-            : []),
-        // {
-        //   label: 'File',
-        //   submenu: [
-        //     {
-        //       label: 'Quit',
-        //       click: () => app.quit(),
-        //       accelerator: 'CmdOrCtrl+W',
-        //     },
-        //   ],
-        // },
-        ...(isDev
-            ? [
-                {
-                    label: 'Developer',
-                    submenu: [
-                        { role: 'reload' },
-                        { role: 'forcereload' },
-                        { type: 'separator' },
-                        { role: 'toggledevtools' },
-                    ],
-                },
-            ]
-            : []),
-    ];
-}
 function ensureCertificates(certsDir) {
     const keyPath = path.join(certsDir, 'server.key');
     const certPath = path.join(certsDir, 'server.crt');
@@ -1110,176 +58,11 @@ function ensureCertificates(certsDir) {
     console.log('[OK] Self-signed SSL certificates generated');
 }
 
-let mainWindow;
-// إعداد نافذة Electron
-// 3. دالة إنشاء نافذة البرنامج
-function createWindow() {
-    console.log('Creating Electron window...');
 
-    // Ignore self-signed certificate errors for localhost
-    session.defaultSession.setCertificateVerifyProc((req, callback) => {
-        if (req.hostname === '127.0.0.1' || req.hostname === 'localhost') {
-            callback(0);
-        } else {
-            callback(-3);
-        }
-    });
 
-    mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            nodeIntegration: false,
-            contextIsolation: true,
-            nodeIntegrationInSubFrames: true,
-            sandbox: false
-        }
-    });
 
-    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        shell.openExternal(url);
-        return { action: 'deny' };
-    });
 
-    // تشغيل السيرفر أولاً ثم تحميل الواجهة
-    const port = 29000;
-    const httpsPort = 29001;
 
-    // HTTPS server options - prefer Let's Encrypt cert if available
-    const certsDir = path.join(__dirname, 'certs');
-    ensureCertificates(certsDir);
-    const letsencryptCertPath = path.join(certsDir, 'letsencrypt_cert.pem');
-    const letsencryptKeyPath = path.join(certsDir, 'letsencrypt_key.pem');
-    let httpsOptions;
-    try {
-        if (fs.existsSync(letsencryptCertPath) && fs.existsSync(letsencryptKeyPath)) {
-            console.log('Using Let\'s Encrypt SSL certificate');
-            httpsOptions = {
-                key: fs.readFileSync(letsencryptKeyPath),
-                cert: fs.readFileSync(letsencryptCertPath)
-            };
-        } else {
-            httpsOptions = {
-                key: fs.readFileSync(path.join(certsDir, 'server.key')),
-                cert: fs.readFileSync(path.join(certsDir, 'server.crt'))
-            };
-        }
-    } catch (e) {
-        console.error('Failed to load certificates for HTTPS:', e.message);
-        httpsOptions = null;
-    }
-
-    if (!httpsOptions) {
-        console.error('Failed to load SSL certificates. Cannot start HTTPS server.');
-        return;
-    }
-
-    const httpsServer = https.createServer(httpsOptions, app);
-    io = require('socket.io')(httpsServer, {
-        cors: {
-            origin: (origin, callback) => callback(null, true),
-            methods: ["GET", "POST"],
-            credentials: true
-        },
-        transports: ['websocket', 'polling'],
-        pingInterval: 5000,
-        pingTimeout: 8000,
-        connectTimeout: 10000,
-        allowUpgrades: true,
-        maxHttpBufferSize: 1e6,
-        perMessageDeflate: false
-    });
-    _mainIo = io;
-    io.use(setupSocketIo);
-    io.on("connection", setupConnectionHandler);
-
-    httpsServer.listen(httpsPort, '0.0.0.0', (err) => {
-        if (err) {
-            console.error('Failed to start HTTPS server:', err);
-            return;
-        }
-        console.log(`HTTPS Server running on https://127.0.0.1:${httpsPort}`);
-
-        const loadUrl = `https://127.0.0.1:${httpsPort}`;
-        mainWindow.loadURL(loadUrl);
-        watchPorts();
-        noip_autoUpdateOnStartup();
-
-        const customUA = mainWindow.webContents.getUserAgent() + " MouScripts_Sim/1.0";
-        session.defaultSession.setUserAgent(customUA);
-
-        session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-            details.requestHeaders['User-Agent'] = customUA;
-            details.requestHeaders['x-device-hwid'] = hwid;
-            callback({ cancel: false, requestHeaders: details.requestHeaders });
-        });
-
-        mainWindow.maximize();
-        mainWindow.show();
-        if (isDev) {
-            mainWindow.webContents.openDevTools();
-        }
-    });
-}
-if (!gotTheLock) {
-    process.exit(0); // If another instance is running, kill the new one immediately
-} else {
-    electronApp.on('second-instance', (event, argv, workingDirectory) => {
-        // This method is called when a second instance is tried to be opened
-        if (mainWindow) {
-            // If the window is already open, bring it to the front
-            if (mainWindow.isMinimized()) {
-                mainWindow.restore();
-            }
-            mainWindow.focus();
-        }
-
-        if (argv.length >= 2) {
-            const protocolUrl = argv.find(arg => arg.startsWith(customScheme + '://'));
-            if (protocolUrl) {
-                const onlyurl = new URL(protocolUrl);
-                const queryParams = Object.fromEntries(onlyurl.searchParams.entries());
-                const queryString = new URLSearchParams(queryParams).toString();
-                const filePath = path.join(__dirname, '/renderer/index1.html'); // Update with your file path
-                mainWindow.loadURL(`file://${filePath}?${queryString}`);
-                // mainWindow.loadFile(path.join(__dirname, './renderer/index1.html') + "?" + queryString);
-            }
-        }
-    });
-}
-
-function createAboutWindow() {
-    aboutWindow = new BrowserWindow({
-        width: 300,
-        height: 300,
-        title: 'About Electron',
-        icon: `${__dirname}/assets/icons/Icon_256x256.png`,
-    });
-
-    aboutWindow.loadFile(path.join(__dirname, './renderer/about.html'));
-}
-// 4. استخدام 'electronApp' الذي قمنا بتعريفه في السطر الأول
-electronApp.whenReady().then(async () => {
-    console.log('Electron app is ready, creating window...');
-    createWindow();
-    const mainMenu = Menu.buildFromTemplate(menu);
-    Menu.setApplicationMenu(mainMenu);
-    if (!isDev) {
-        ensureAdmin();
-    }
-
-    console.log("[Rocket] App Ready, checking activation...");
-    // الصفحة تُحمّل بالفعل عبر السيرفر داخل createWindow()
-});
-
-electronApp.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        electronApp.quit();
-    }
-});
-electronApp.on('will-quit', () => {
-});
 
 
 app.use(cookieParser());
@@ -1315,21 +98,17 @@ let onlineUsers = {};
 let db;
 
 function getDatabasePath() {
-    const userDataPath = electronApp.getPath('userData');
-    const dbDir = path.join(userDataPath, "mous"); // مسار المجلد الفرعي
+    const dbDir = path.join(__dirname, 'data');
     const dbName = 'sms_gateway.db';
     const destPath = path.join(dbDir, dbName);
 
     try {
-        // 1. التأكد من وجود المجلد 'mous' وإنشاؤه إذا لم يكن موجوداً
         if (!fs.existsSync(dbDir)) {
             fs.mkdirSync(dbDir, { recursive: true });
             console.log('Directory created:', dbDir);
         }
 
-        // 2. التأكد من وجود ملف قاعدة البيانات، وإنشاء ملف فارغ إذا لم يكن موجوداً
         if (!fs.existsSync(destPath)) {
-            // إنشاء ملف فارغ (Empty file)
             fs.writeFileSync(destPath, '');
             console.log('New database file created at:', destPath);
         }
@@ -1725,13 +504,6 @@ const smsProcessingBuffer = {};
     }
 
     console.log("Database & Settings Table Ready");
-    MouGuard.init();
-    MouGuard.verify().then(ok => {
-        console.log("[Lock] MouGuard initialized" + (ok ? " \u2713 License valid" : " [!] License verification failed"));
-        if (!ok) console.error("[!] MouGuard: " + (MouGuard.getLastError() || "Unknown error"));
-    }).catch(e => {
-        console.error("[!] MouGuard verify error:", e.message);
-    });
 })();
 
 // --- Multer config for receipt uploads ---
@@ -1760,7 +532,6 @@ const upload = multer({
     }
 });
 
-app.use('/api', MouGuard.router());
 
 // --- دالة التحقق من التثبيت (Middleware) ---
 const checkSetup = async (req, res, next) => {
@@ -1796,18 +567,7 @@ const acmeChallengeMiddleware = (req, res, next) => {
 
 // --- دالة التحقق للاكترvation (Middleware) ---
 const checkLicense = async (req, res, next) => {
-    if (_sslPauseGuard) return next();
-    if (req.path === '/login' || req.path === '/install' || req.path.startsWith('/api/setup/')) return next();
-    if (req.path === '/api/license-status' || req.path === '/api/activate-app') return next();
-    if (req.path === '/api/login') return next();
-    if (MouGuard.isActive()) {
-        return next();
-    }
-    const ok = await MouGuard.verify();
-    if (ok) {
-        return next();
-    }
-    MouGuard.middleware(req, res, next);
+    return next();
 };
 
 // --- دالة التحقق (Middleware) للباك اند ---
@@ -2182,272 +942,9 @@ function encodeUSSD7bit(ussd) {
     }
 }
 
-// --- دالة مراقبة المنافذ (الـ Listener) ---
-async function watchPorts() {
-    setInterval(async () => {
-        try {
-            const ports = await SerialPort.list();
-
-            // فلترة منافذ هواوي
-            const currentUiPorts = ports
-                .filter((p) => p.friendlyName && p.friendlyName.includes("PC UI Interface"))
-                .map((p) => p.path);
-
-            // 1. اكتشاف فلاشات جديدة أو إعادة توصيل فلاشة سقطت (Error 433)
-            currentUiPorts.forEach((path) => {
-                // إذا كان المودم غير موجود، أو موجود ولكن المنفذ مغلق (حالة خطأ 433)
-                if (!activeModems[path] || (activeModems[path].port && !activeModems[path].port.isOpen)) {
-                    console.log(`[New] Attempting to connect/reconnect: ${path}`);
-                    initSingleModem(path);
-                }
-            });
-
-            // 2. اكتشاف فلاشات تم فصلها فعلياً من الـ USB (مع debounce)
-            Object.keys(activeModems).forEach((path) => {
-                // تخطي الأجهزة الافتراضية (الهواتف) - تدار عبر Socket.IO
-                if (path.startsWith("phone-")) return;
-
-                if (!currentUiPorts.includes(path)) {
-                    const modemEntry = activeModems[path];
-                    if (!modemEntry) return;
-
-                    // زيادة عداد الفقدان
-                    modemEntry.removalCount = (modemEntry.removalCount || 0) + 1;
-
-                    // نحتاج دورة واحدة فقط (1 ثانية) قبل الحذف للسرعة القصوى
-                    if (modemEntry.removalCount < 1) {
-                        return;
-                    }
-
-                    console.log(`[!] Modem disconnected from USB: ${path}`);
-
-                    // تنظيف المؤقتات (Intervals) لمنع تعليق المعالج
-                    if (modemEntry.signalInterval) clearInterval(modemEntry.signalInterval);
-                    if (modemEntry.timeoutTimer) clearTimeout(modemEntry.timeoutTimer);
-
-                    // إغلاق المنفذ بأمان
-                    if (modemEntry.port && modemEntry.port.isOpen) {
-                        modemEntry.port.close((err) => {
-                            if (err) console.error(`Error closing ${path}:`, err.message);
-                        });
-                    }
-
-                    delete activeModems[path];
-                    broadcastModemList(); // تحديث القائمة فوراً للكل
-                } else {
-                    // الجهاز موجود - إعادة تعيين عداد الفقدان
-                    if (activeModems[path]?.removalCount) {
-                        activeModems[path].removalCount = 0;
-                    }
-                }
-            });
-        } catch (err) {
-            console.error("[X] Error in watchPorts loop:", err.message);
-        }
-    }, 1000);
-}
-
-// --- تهيئة منفذ واحد جديد ---
-// في دالة initSingleModem تأكد من تعريف الكائن كـ Object
-function initSingleModem(pathName) {
-    // 1. فحص استباقي لمنع تكرار فتح نفس المنفذ (تجنب خطأ 170)
-    if (activeModems[pathName] && activeModems[pathName].port && activeModems[pathName].port.isOpen) {
-        return;
-    }
-
-    try {
-        const port = new SerialPort({
-            path: pathName,
-            baudRate: 115200,
-            autoOpen: false // تعطيل الفتح التلقائي للتحكم في الأخطاء
-        });
-
-        const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
-
-        // متغيرات الحالة الخاصة بكل منفذ (توضع داخل النطاق لعدم التداخل)
-        let isListingSMS = false;
-        let currentSMSHeader = null;
-
-        // 2. محاولة الفتح اليدوي مع معالجة الأخطاء
-        port.open((err) => {
-            if (err) {
-                console.error(`[Stop] Error opening ${pathName}: ${err.message}`);
-                return;
-            }
-
-            console.log(`[OK] UI Port Opened: ${pathName}`);
-            // انتظر ثانيتين لضمان استقرار المودم ثم صفر الرسائل
-            setTimeout(() => {
-                clearAllSimMessages(pathName);
-            }, 2000);
-            // تهيئة كائن المودم بالكامل
-            activeModems[pathName] = {
-                port: port,
-                phoneNumber: null,
-                simSlot: 0,
-                isBusy: false,
-                currentOwner: null,
-                timeoutTimer: null,
-                isSearching: false,
-                removalCount: 0,
-                signal: 0,
-                signalInterval: null, // لتنظيفه لاحقاً
-                smsAssembler: {}, // مخزن خاص بهذه الفلاشة فقط
-                smsHeader: null
-            };
-
-            // 3. سلسلة أوامر التهيئة مع تأخيرات زمنية (Delays) لضمان عدم تشنج المودم
-            const sendAction = (cmd, delay) => setTimeout(() => port.isOpen && port.write(`${cmd}\r\n`), delay);
-
-            // 1. إلغاء الـ AutoRun والـ CD-ROM نهائياً من الهاردوير
-            // sendAction("AT^U2DIAG=0", 100);
-            sendAction("AT^CVOICE=0", 100);
-            sendAction("AT+CHUP", 200);
-            sendAction('AT+CMGF=0', 300); // التأكد من وضع النص
-            sendAction('AT+CSDH=1', 400); // إظهار رؤوس الرسائل بشكل تفصيلي
-            sendAction('AT+CSCS="UCS2"', 500);
-            sendAction("AT+CUSD=1", 600);
-            sendAction('AT+CPMS="ME","ME","ME"', 700);
-            sendAction("AT+CNMI=2,1,0,0,0", 800);
-            sendAction("AT+CLIP=1", 900); // تفعيل إظهار رقم المتصل
-
-            // بدء البحث عن الرقم تلقائياً
-            setTimeout(() => startAutoDetection(pathName), 3000);
-
-            // طلب قوة الإشارة بشكل دوري (كل 10 ثوانٍ)
-            activeModems[pathName].signalInterval = setInterval(() => {
-                if (activeModems[pathName]?.port?.isOpen) {
-                    activeModems[pathName].port.write("AT+CSQ\r\n");
-                }
-            }, 10000);
-
-            broadcastModemList();
-        });
 
 
-        // 4. معالجة البيانات الواردة (Parser)
-        parser.on("data", (line) => {
-            line = line.trim();
-            if (!line) return;
 
-            const modem = activeModems[pathName];
-            if (!modem) return;
-
-            // console.log(`[Inbox] [${pathName}][${modem.phoneNumber || "Unknown"}] Received: "${line}"`);
-            // اكتشاف امتلاء الذاكرة
-            if (line.includes("^SMMEMFULL") || line.includes("+CMS ERROR: 322")) {
-                console.warn(`[!] [${pathName}][${activeModems[pathName]?.phoneNumber || "Unknown"}] SIM Memory Full! Clearing messages...`);
-
-                // إرسال أمر المسح الشامل
-                port.write("AT+CMGD=1,4\r\n", (err) => {
-                    if (err) console.error("Error clearing SIM:", err);
-                    else {
-                        console.log(`[OK] [${pathName}] SIM Memory cleared successfully.`);
-                        // إظهار توست للمستخدم في الواجهة
-                        io.emit("toast-notification", {
-                            message: "تم تنظيف ذاكرة الشريحة تلقائياً لاستقبال رسائل جديدة",
-                            type: "warning"
-                        });
-                    }
-                });
-                return;
-            }
-
-
-            if (line === "OK" && modem.pendingDelete) {
-                modem.pendingDelete = false;
-                return;
-            }
-
-            // 2. معالجة الهيدر (تحسين التقاط الحالة)
-            if (line.startsWith("+CMGL:") || line.startsWith("+CMGR:")) {
-                console.log(`\n[Search] [DEBUG] Header Received: "${line}"`);
-                modem.isReadingSMS = true;
-                modem.smsHeader = line;
-
-                let extractedIndex;
-                if (line.startsWith("+CMGL:")) {
-                    extractedIndex = line.split(',')[0].split(': ')[1];
-                } else {
-                    extractedIndex = modem.tempReadingIndex;
-                }
-                modem.tempReadingIndex = extractedIndex || Date.now().toString();
-                return;
-            }
-
-            // 3. معالجة محتوى الرسالة (تعديل جوهري هنا)
-            if (modem.isReadingSMS) {
-                // إذا وصلنا لـ OK، فهذا يعني نهاية سطر الأمر الحالي، لكن لا نغلق الحالة 
-                // لأن هناك أجزاء أخرى قد تصل كأوامر منفصلة
-                if (line === "OK") {
-                    modem.isReadingSMS = false; // نغلق حالة القراءة الحالية فقط
-                    return;
-                }
-
-                // التأكد أن السطر هو PDU (أرقام Hex فقط وطويل)
-                if (/^[0-9A-Fa-f]{20,}$/.test(line)) {
-                    processIncomingSMS(pathName, line);
-                    return;
-                }
-            }
-
-            // 4. إشعار وصول رسالة جديدة (هام جداً للأجزاء التالية)
-            if (line.includes("+CMTI:")) {
-                const index = line.split(",")[1];
-                modem.tempReadingIndex = index;
-
-                // تأخير بسيط لضمان استقرار المودم قبل طلب الجزء التالي
-                setTimeout(() => {
-                    port.write(`AT+CMGR=${index}\r\n`);
-                }, 500);
-                return;
-            }
-
-
-            // 4. USSD والإشارة والمكالمات
-            if (line.includes("+CUSD:")) {
-                const match = line.match(/"([^"]+)"/);
-                if (match) handleUssdLogic(pathName, decodeSmart(match[1]).trim());
-            }
-
-            if (line.startsWith("+CSQ:")) {
-                const match = line.match(/\+CSQ:\s*(\d+),/);
-                if (match) {
-                    const rssi = parseInt(match[1]);
-                    const signalPercent = rssi === 99 ? 0 : Math.round((rssi / 31) * 100);
-                    modem.signal = signalPercent;
-                    io.emit("signal-update", { port: pathName, signal: signalPercent });
-                }
-            }
-
-            if (line.includes("RING") || line.startsWith("+CLIP:")) {
-                let text = "[Bell] مكالمة واردة...";
-                if (line.startsWith("+CLIP:")) {
-                    const m = line.match(/"(\+?\d+)"/);
-                    text = `[Tel] متصل الآن: ${m ? m[1] : "رقم مخفي"}`;
-                }
-                io.emit("modem-data", { port: pathName, type: "call-incoming", content: text });
-            }
-
-            if (line === "OK") isListingSMS = false;
-        });
-
-        // 5. معالجة أحداث الخطأ والإغلاق
-        port.on("error", (err) => {
-            console.error(`[Fire] Runtime Error on ${pathName}: ${err.message}`);
-        });
-
-        port.on("close", () => {
-            console.log(`[Plug] Port ${pathName} closed.`);
-            if (activeModems[pathName]?.signalInterval) clearInterval(activeModems[pathName].signalInterval);
-            delete activeModems[pathName];
-            broadcastModemList();
-        });
-
-    } catch (e) {
-        console.error(`[!] Exception in initSingleModem: ${e.message}`);
-    }
-}
 
 // دالة مساعدة لمعالجة USSD وتحديث الرقم
 function handleUssdLogic(pathName, decoded) {
@@ -3367,6 +1864,7 @@ app.get("/api/noip/settings", authenticateToken, isAdmin, async (req, res) => {
 // Auto-check No-IP on startup: compare DNS IP vs public IP, update if different
 async function noip_autoUpdateOnStartup() {
     try {
+        if (!db) { console.log('[No-IP AutoUpdate] Skipped — DB not ready'); return; }
         const rows = await db.all("SELECT key, value FROM settings WHERE key IN ('noip_hostname', 'noip_username', 'noip_password', 'noip_enabled')");
         const settings = {};
         rows.forEach(r => { settings[r.key] = r.value || ''; });
@@ -3668,13 +2166,8 @@ app.post("/api/ssl/create-account", authenticateToken, isAdmin, async (req, res)
 let sslTask = { status: 'idle', message: '', result: null };
 
 async function runSslTask(domain) {
-    _corrupted = false;
     _sslPauseGuard = true;
-    if (typeof MouGuard !== 'undefined' && MouGuard.recover && _currentKey) {
-        MouGuard.recover(_currentKey, _currentSecret);
-        console.log('[SSL] MouGuard state recovered');
-    }
-    console.log('[SSL] MouGuard heartbeat paused');
+    console.log('[SSL] Heartbeat paused');
     sslTask = { status: 'running', message: 'Starting...', result: null };
     try {
         console.log('[SSL] Creating client...');
@@ -6837,39 +5330,75 @@ function fixLanguageJunctions(text) {
 }
 
 
-function ensureAdmin() {
-    // أمر fltmc هو الأدق لفحص صلاحيات المسؤول في ويندوز
-    exec('fltmc', (err) => {
-        if (err) {
-            console.log("البرنامج لا يملك صلاحيات مسؤول، جاري الطلب...");
 
-            const choice = dialog.showMessageBoxSync({
-                type: 'warning',
-                title: 'صلاحيات المسؤول مطلوبة',
-                message: 'يحتاج البرنامج لصلاحيات المسؤول لتشغيل السيرفر بشكل صحيح.',
-                buttons: ['تشغيل كمسؤول', 'إغلاق'],
-                defaultId: 0,
-                cancelId: 1
-            });
-
-            if (choice === 0) {
-                // استخدام PowerShell لطلب الصلاحية وإعادة تشغيل التطبيق
-                const exePath = process.executablePath;
-                const command = `Start-Process "${exePath}" -Verb RunAs`;
-
-                exec(`powershell -Command "${command}"`, (psErr) => {
-                    if (!psErr) electronApp.quit(); // أغلق النسخة الحالية فقط إذا نجح طلب الصلاحية
-                });
-            } else {
-                electronApp.quit(); // أغلق إذا رفض المستخدم
-            }
-        } else {
-            console.log("تم التأكد: البرنامج يعمل بصلاحيات مسؤول [OK]");
-        }
-    });
+// --- Standalone HTTPS Server Startup ---
+const httpsPort = 29001;
+const certsDir = path.join(__dirname, 'certs');
+ensureCertificates(certsDir);
+const letsencryptCertPath = path.join(certsDir, 'letsencrypt_cert.pem');
+const letsencryptKeyPath = path.join(certsDir, 'letsencrypt_key.pem');
+let httpsOptions;
+try {
+    if (fs.existsSync(letsencryptCertPath) && fs.existsSync(letsencryptKeyPath)) {
+        console.log("Using Let's Encrypt SSL certificate");
+        httpsOptions = {
+            key: fs.readFileSync(letsencryptKeyPath),
+            cert: fs.readFileSync(letsencryptCertPath)
+        };
+    } else {
+        httpsOptions = {
+            key: fs.readFileSync(path.join(certsDir, 'server.key')),
+            cert: fs.readFileSync(certsDir, 'server.crt')
+        };
+    }
+} catch (e) {
+    console.error('Failed to load certificates for HTTPS:', e.message);
+    httpsOptions = null;
 }
 
+if (!httpsOptions) {
+    console.error('Failed to load SSL certificates. Cannot start HTTPS server.');
+    process.exit(1);
+}
 
+const httpsServer = https.createServer(httpsOptions, app);
+io = require('socket.io')(httpsServer, {
+    cors: {
+        origin: (origin, callback) => callback(null, true),
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    transports: ['websocket', 'polling'],
+    pingInterval: 5000,
+    pingTimeout: 8000,
+    connectTimeout: 10000,
+    allowUpgrades: true,
+    maxHttpBufferSize: 1e6,
+    perMessageDeflate: false
+});
+_mainIo = io;
+io.use(setupSocketIo);
+io.on("connection", setupConnectionHandler);
 
+noip_autoUpdateOnStartup();
 
+function getLocalIP() {
+    const { networkInterfaces } = require('os');
+    const nets = networkInterfaces();
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            if (net.family === 'IPv4' && !net.internal) return net.address;
+        }
+    }
+    return '127.0.0.1';
+}
+
+httpsServer.listen(httpsPort, '0.0.0.0', (err) => {
+    if (err) {
+        console.error('Failed to start HTTPS server:', err);
+        return;
+    }
+    const localIP = getLocalIP();
+    console.log(`HTTPS Server running on https://${localIP}:${httpsPort}`);
+});
 
