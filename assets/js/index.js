@@ -344,6 +344,9 @@ function setupSocketEvents(socket) {
 
     // تحديث الـ port-selector كل ما تظهر صفحة الهاتف (حتى من الكاش)
     $(document).on('page_shown', function (e, url) {
+        if (url === 'assets/phone.html') {
+            refreshPortSelectorUI();
+        }
         if (url === 'assets/messages.html') {
             if (typeof initCustomSelects === "function") {
                 initCustomSelects();

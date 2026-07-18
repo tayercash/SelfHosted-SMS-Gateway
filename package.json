@@ -4,21 +4,69 @@
   "description": "SMS Gateway System",
   "author": "Mouscripts",
   "main": "main.js",
+  "config": {
+    "build_from_source": false
+  },
   "scripts": {
-    "start": "node main.js"
+    "start": "cross-env NODE_ENV=development electron .",
+    "build": "cross-env NODE_ENV=production electron-builder",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
+    "@serialport/parser-readline": "^13.0.0",
     "acme-client": "^5.4.0",
     "bcryptjs": "^3.0.3",
     "body-parser": "^2.2.2",
+    "bytenode": "^1.5.7",
     "cookie-parser": "^1.4.7",
+    "cross-env": "^10.1.0",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
+    "node-machine-id": "^1.1.12",
     "node-pdu": "^2.1.1",
     "node-sms-pdu": "^0.3.0",
+    "serialport": "^13.0.0",
     "socket.io": "^4.8.3",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.0.2"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^26.7.0"
+  },
+  "build": {
+    "appId": "com.mouscripts.mousim",
+    "productName": "SMS Gateway",
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "requestedExecutionLevel": "requireAdministrator",
+      "target": "nsis",
+      "icon": "assets/icons/win/icon.ico"
+    },
+    "extraResources": [
+      {
+        "from": "resources/",
+        "to": "bin/",
+        "filter": [
+          "**/*"
+        ]
+      },
+      "sms_gateway.db"
+    ],
+    "nsis": {
+      "allowElevation": true,
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "SMS Gateway"
+    },
+    "asar": true,
+    "asarUnpack": [
+      "**/*.jsc"
+    ]
   }
 }

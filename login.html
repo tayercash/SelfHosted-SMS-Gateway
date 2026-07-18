@@ -312,7 +312,7 @@
       const fp = await FingerprintJS.load();
       const result = await fp.get();
       const user_FP = result.visitorId;
-      const hwid = user_FP;
+      const hwid = window.electronAPI ? window.electronAPI.getMachineId() : user_FP;
 
       try {
         const response = await fetch('/api/login', {

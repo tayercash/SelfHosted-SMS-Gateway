@@ -73,6 +73,7 @@ function setAdminUI(isAdmin) {
     $('#sidebar-etisalat-btn').removeClass('d-none');
     $('#all_transactions_btn_nav').removeClass('d-none');
     $('#sidebar-all-transactions-btn').removeClass('d-none');
+    $('#sidebar-modems-btn').removeClass('d-none');
     $('#sidebar-analysis-btn').removeClass('d-none');
     $('#sidebar-noip-btn').removeClass('d-none');
   } else {
@@ -82,6 +83,7 @@ function setAdminUI(isAdmin) {
     $('#sidebar-etisalat-btn').addClass('d-none');
     $('#all_transactions_btn_nav').addClass('d-none');
     $('#sidebar-all-transactions-btn').addClass('d-none');
+    $('#sidebar-modems-btn').addClass('d-none');
     $('#sidebar-analysis-btn').addClass('d-none');
     $('#sidebar-noip-btn').addClass('d-none');
   }

@@ -1,0 +1,52 @@
+<div class="phone_container">
+
+    <div class="phone">
+        <div id="phoneNum_screen">
+            <div class="left">
+                <i class="fad fa-sim-card"></i><span id="modem_phoneNumber"></span><span id="timeout-display" style="color: #283387; font-weight: bold;"></span>
+            </div>
+
+            <div class="signal-strength-container">
+
+                <div class="modem-card" data-port>
+                    <span class="signal-strength"></span>
+                </div>
+
+            </div>
+        </div>
+        <div id="screen">
+            <div class="info center" data-i18n="phone.ready">╪¼╪º┘ç╪▓ ┘ä┘ä╪Ñ╪▒╪│╪º┘ä</div>
+        </div>
+        <div class="display_container">
+            <div id="display" data-placeholder="---"></div>
+
+            <button class="back" onclick="back()" type="button"><i
+                    class="far fa-backspace"></i> </button>
+        </div>
+        <div class="keypad">
+            <button class="num" onclick="add('1')">1</button><button class="num" onclick="add('2')">2</button><button
+                class="num" onclick="add('3')">3</button>
+            <button class="num" onclick="add('4')">4</button><button class="num" onclick="add('5')">5</button><button
+                class="num" onclick="add('6')">6</button>
+            <button class="num" onclick="add('7')">7</button><button class="num" onclick="add('8')">8</button><button
+                class="num" onclick="add('9')">9</button>
+            <button class="num special" onclick="add('*')">*</button><button class="num"
+                onclick="add('0')">0</button><button class="num special" onclick="add('#')">#</button>
+        </div>
+        <div class="action_btns">
+            <div class="call_cancel_actions">
+                <button class="btn call" onclick="send(this)"><i class="fas fa-phone-alt"></i></button>
+                <button class="btn cancel hidden" onclick="cancelUSSD()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="sim-wrapper">
+                <select id="port-selector">
+                    <option value="" data-i18n="phone.search_ports">╪¼╪º╪▒┘è ╪º┘ä╪¿╪¡╪½ ╪╣┘å ┘ü┘ä╪º╪┤╪º╪¬...</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/assets/js/i18n.js"></script>
+<script src="assets/js/phone.js"></script>
