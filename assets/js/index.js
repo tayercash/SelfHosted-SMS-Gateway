@@ -344,9 +344,6 @@ function setupSocketEvents(socket) {
 
     // تحديث الـ port-selector كل ما تظهر صفحة الهاتف (حتى من الكاش)
     $(document).on('page_shown', function (e, url) {
-        if (url === 'assets/phone.html') {
-            refreshPortSelectorUI();
-        }
         if (url === 'assets/messages.html') {
             if (typeof initCustomSelects === "function") {
                 initCustomSelects();
@@ -599,7 +596,7 @@ async function validateSession() {
         const fp = await FingerprintJS.load();
         const result = await fp.get();
         const user_FP = result.visitorId;
-        const hwid = window.electronAPI ? window.electronAPI.getMachineId() : user_FP;
+        const hwid = user_FP;
         const response = await fetch('/api/check-status', {
             headers: {
                 'x-device-hwid': hwid

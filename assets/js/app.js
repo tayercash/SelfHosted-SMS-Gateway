@@ -71,15 +71,11 @@ function setAdminUI(isAdmin) {
     $('#sidebar-admin-btn').removeClass('d-none');
     $('#etisalat_btn_nav').removeClass('d-none');
     $('#sidebar-etisalat-btn').removeClass('d-none');
-    $('#modems_btn_nav').removeClass('d-none');
-    $('#sidebar-modems-btn').removeClass('d-none');
     $('#all_transactions_btn_nav').removeClass('d-none');
     $('#sidebar-all-transactions-btn').removeClass('d-none');
     $('#sidebar-analysis-btn').removeClass('d-none');
     $('#sidebar-noip-btn').removeClass('d-none');
   } else {
-    $('#modems_btn_nav').addClass('d-none');
-    $('#sidebar-modems-btn').addClass('d-none');
     $('#admin_btn_nav').addClass('d-none');
     $('#sidebar-admin-btn').addClass('d-none');
     $('#etisalat_btn_nav').addClass('d-none');

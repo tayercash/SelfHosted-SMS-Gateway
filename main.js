@@ -2,9 +2,6 @@
 const https = require("https");
 console.log('Starting main.js...');
 const { Server } = require("socket.io");
-const { SerialPort } = require("serialport");
-const { ReadlineParser } = require("@serialport/parser-readline");
-const { app: electronApp, BrowserWindow, Menu, session, ipcMain, dialog, shell } = require('electron');
 const path = require("path");
 const { exec, spawn } = require('child_process');
 const express = require("express");
@@ -992,295 +989,7 @@ const app = express();
 
 let io = null;
 
-
-
-const customScheme = 'moumsgs';
-const gotTheLock = electronApp.requestSingleInstanceLock();
-// process.env['NODE_ENV'] = 'production';
-process.env['NODE_ENV'] = 'development';
-
-const isMac = process.platform === 'darwin';
-// طريقة أكثر دقة للتأكد من حالة الإنتاج
-const isDev = process.env.NODE_ENV !== 'production';
-
-// أو ببساطة اعتماداً على وجود ملف الـ asar
-const isPackaged = electronApp.isPackaged;
-
-const resourcesPath = isDev
-    ? path.join(__dirname, 'resources')
-    : path.join(process.resourcesPath, 'resources');
-
-// جلب الـ ID الحقيقي للجهاز
-let hwid;
-try {
-    console.log('Loading node-machine-id...');
-    const { machineIdSync } = require('node-machine-id');
-    console.log('Calling machineIdSync...');
-    hwid = machineIdSync({ original: true });
-    console.log('HWID obtained:', hwid);
-} catch (error) {
-    console.error('Error getting machine ID:', error);
-    hwid = 'fallback-hwid-' + Date.now();
-}
-
-let menu = [];
-if (isDev) {
-    menu = [
-        ...(isMac
-            ? [
-                {
-                    label: electronApp.name,
-                    submenu: [
-                        {
-                            label: 'About',
-                            click: createAboutWindow,
-                        },
-                    ],
-                },
-            ]
-            : []),
-        {
-            role: 'fileMenu',
-        },
-        ...(!isMac
-            ? [
-                {
-                    label: 'Help',
-                    submenu: [
-                        {
-                            label: 'About',
-                            click: createAboutWindow,
-                        },
-                    ],
-                },
-            ]
-            : []),
-        // {
-        //   label: 'File',
-        //   submenu: [
-        //     {
-        //       label: 'Quit',
-        //       click: () => app.quit(),
-        //       accelerator: 'CmdOrCtrl+W',
-        //     },
-        //   ],
-        // },
-        ...(isDev
-            ? [
-                {
-                    label: 'Developer',
-                    submenu: [
-                        { role: 'reload' },
-                        { role: 'forcereload' },
-                        { type: 'separator' },
-                        { role: 'toggledevtools' },
-                    ],
-                },
-            ]
-            : []),
-    ];
-}
-function ensureCertificates(certsDir) {
-    const keyPath = path.join(certsDir, 'server.key');
-    const certPath = path.join(certsDir, 'server.crt');
-    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) return;
-
-    console.log('🔐 Generating self-signed SSL certificates...');
-    const forge = require('node-forge');
-    const pki = forge.pki;
-    const keys = pki.rsa.generateKeyPair(2048);
-    const cert = pki.createCertificate();
-    cert.publicKey = keys.publicKey;
-    cert.serialNumber = Date.now().toString(16);
-    cert.validity.notBefore = new Date();
-    cert.validity.notAfter = new Date();
-    cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 10);
-    const attrs = [{ name: 'commonName', value: 'localhost' }, { name: 'organizationName', value: 'SMS Gateway' }];
-    cert.setSubject(attrs);
-    cert.setIssuer(attrs);
-    cert.setExtensions([
-        { name: 'basicConstraints', cA: true },
-        { name: 'keyUsage', keyCertSign: true, digitalSignature: true, keyEncipherment: true },
-        { name: 'subjectAltName', altNames: [{ type: 2, value: 'localhost' }, { type: 7, ip: '127.0.0.1' }] }
-    ]);
-    cert.sign(keys.privateKey, forge.md.sha256.create());
-    if (!fs.existsSync(certsDir)) fs.mkdirSync(certsDir, { recursive: true });
-    fs.writeFileSync(keyPath, pki.privateKeyToPem(keys.privateKey));
-    fs.writeFileSync(certPath, pki.certificateToPem(cert));
-    console.log('✅ Self-signed SSL certificates generated');
-}
-
-let mainWindow;
-// إعداد نافذة Electron
-// 3. دالة إنشاء نافذة البرنامج
-function createWindow() {
-    console.log('Creating Electron window...');
-
-    // Ignore self-signed certificate errors for localhost
-    session.defaultSession.setCertificateVerifyProc((req, callback) => {
-        if (req.hostname === '127.0.0.1' || req.hostname === 'localhost') {
-            callback(0);
-        } else {
-            callback(-3);
-        }
-    });
-
-    mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            nodeIntegration: false,
-            contextIsolation: true,
-            nodeIntegrationInSubFrames: true,
-            sandbox: false
-        }
-    });
-
-    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        shell.openExternal(url);
-        return { action: 'deny' };
-    });
-
-    // تشغيل السيرفر أولاً ثم تحميل الواجهة
-    const port = 29000;
-    const httpsPort = 29001;
-
-    // HTTPS server options - prefer Let's Encrypt cert if available
-    const certsDir = path.join(__dirname, 'certs');
-    ensureCertificates(certsDir);
-    const letsencryptCertPath = path.join(certsDir, 'letsencrypt_cert.pem');
-    const letsencryptKeyPath = path.join(certsDir, 'letsencrypt_key.pem');
-    let httpsOptions;
-    try {
-        if (fs.existsSync(letsencryptCertPath) && fs.existsSync(letsencryptKeyPath)) {
-            console.log('Using Let\'s Encrypt SSL certificate');
-            httpsOptions = {
-                key: fs.readFileSync(letsencryptKeyPath),
-                cert: fs.readFileSync(letsencryptCertPath)
-            };
-        } else {
-            httpsOptions = {
-                key: fs.readFileSync(path.join(certsDir, 'server.key')),
-                cert: fs.readFileSync(path.join(certsDir, 'server.crt'))
-            };
-        }
-    } catch (e) {
-        console.error('Failed to load certificates for HTTPS:', e.message);
-        httpsOptions = null;
-    }
-
-    if (!httpsOptions) {
-        console.error('Failed to load SSL certificates. Cannot start HTTPS server.');
-        return;
-    }
-
-    const httpsServer = https.createServer(httpsOptions, app);
-    io = require('socket.io')(httpsServer, {
-        cors: {
-            origin: (origin, callback) => callback(null, true),
-            methods: ["GET", "POST"],
-            credentials: true
-        },
-        transports: ['websocket', 'polling'],
-        pingInterval: 5000,
-        pingTimeout: 8000,
-        connectTimeout: 10000,
-        allowUpgrades: true,
-        maxHttpBufferSize: 1e6,
-        perMessageDeflate: false
-    });
-    _mainIo = io;
-    io.use(setupSocketIo);
-    io.on("connection", setupConnectionHandler);
-
-    httpsServer.listen(httpsPort, '0.0.0.0', (err) => {
-        if (err) {
-            console.error('Failed to start HTTPS server:', err);
-            return;
-        }
-        console.log(`HTTPS Server running on https://127.0.0.1:${httpsPort}`);
-
-        const loadUrl = `https://127.0.0.1:${httpsPort}`;
-        mainWindow.loadURL(loadUrl);
-        watchPorts();
-        noip_autoUpdateOnStartup();
-
-        const customUA = mainWindow.webContents.getUserAgent() + " MouScripts_Sim/1.0";
-        session.defaultSession.setUserAgent(customUA);
-
-        session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-            details.requestHeaders['User-Agent'] = customUA;
-            details.requestHeaders['x-device-hwid'] = hwid;
-            callback({ cancel: false, requestHeaders: details.requestHeaders });
-        });
-
-        mainWindow.maximize();
-        mainWindow.show();
-        if (isDev) {
-            mainWindow.webContents.openDevTools();
-        }
-    });
-}
-if (!gotTheLock) {
-    process.exit(0); // If another instance is running, kill the new one immediately
-} else {
-    electronApp.on('second-instance', (event, argv, workingDirectory) => {
-        // This method is called when a second instance is tried to be opened
-        if (mainWindow) {
-            // If the window is already open, bring it to the front
-            if (mainWindow.isMinimized()) {
-                mainWindow.restore();
-            }
-            mainWindow.focus();
-        }
-
-        if (argv.length >= 2) {
-            const protocolUrl = argv.find(arg => arg.startsWith(customScheme + '://'));
-            if (protocolUrl) {
-                const onlyurl = new URL(protocolUrl);
-                const queryParams = Object.fromEntries(onlyurl.searchParams.entries());
-                const queryString = new URLSearchParams(queryParams).toString();
-                const filePath = path.join(__dirname, '/renderer/index1.html'); // Update with your file path
-                mainWindow.loadURL(`file://${filePath}?${queryString}`);
-                // mainWindow.loadFile(path.join(__dirname, './renderer/index1.html') + "?" + queryString);
-            }
-        }
-    });
-}
-
-function createAboutWindow() {
-    aboutWindow = new BrowserWindow({
-        width: 300,
-        height: 300,
-        title: 'About Electron',
-        icon: `${__dirname}/assets/icons/Icon_256x256.png`,
-    });
-
-    aboutWindow.loadFile(path.join(__dirname, './renderer/about.html'));
-}
-// 4. استخدام 'electronApp' الذي قمنا بتعريفه في السطر الأول
-electronApp.whenReady().then(async () => {
-    console.log('Electron app is ready, creating window...');
-    createWindow();
-    const mainMenu = Menu.buildFromTemplate(menu);
-    Menu.setApplicationMenu(mainMenu);
-    if (!isDev) {
-        ensureAdmin();
-    }
-
-    console.log("🚀 App Ready, checking activation...");
-    // الصفحة تُحمّل بالفعل عبر السيرفر داخل createWindow()
-});
-
-electronApp.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        electronApp.quit();
-    }
-});
-electronApp.on('will-quit', () => {
-    stopCloudflare();
-});
+process.env['NODE_ENV'] = process.env.NODE_ENV || 'development';
 
 
 app.use(cookieParser());
@@ -1316,21 +1025,17 @@ let onlineUsers = {};
 let db;
 
 function getDatabasePath() {
-    const userDataPath = electronApp.getPath('userData');
-    const dbDir = path.join(userDataPath, "mous"); // مسار المجلد الفرعي
+    const dbDir = path.join(__dirname, "data");
     const dbName = 'sms_gateway.db';
     const destPath = path.join(dbDir, dbName);
 
     try {
-        // 1. التأكد من وجود المجلد 'mous' وإنشاؤه إذا لم يكن موجوداً
         if (!fs.existsSync(dbDir)) {
             fs.mkdirSync(dbDir, { recursive: true });
             console.log('Directory created:', dbDir);
         }
 
-        // 2. التأكد من وجود ملف قاعدة البيانات، وإنشاء ملف فارغ إذا لم يكن موجوداً
         if (!fs.existsSync(destPath)) {
-            // إنشاء ملف فارغ (Empty file)
             fs.writeFileSync(destPath, '');
             console.log('New database file created at:', destPath);
         }
@@ -2139,355 +1844,9 @@ function decode7BitPacked(hex) {
     return output.replace(/\x00+$/, "").replace(/\x1B/g, "").trim();
 }
 
-// --- دالة تشفير USSD للإرسال ---
-function encodeUSSD7bit(ussd) {
-    const lookup = {
-        "*": 0x2a,
-        "#": 0x23,
-        0: 0x30,
-        1: 0x31,
-        2: 0x32,
-        3: 0x33,
-        4: 0x34,
-        5: 0x35,
-        6: 0x36,
-        7: 0x37,
-        8: 0x38,
-        9: 0x39,
-    };
-    try {
-        let values = ussd.split("").map((c) => lookup[c]);
-        let result = "",
-            current_val = 0,
-            shift = 0;
-        for (let v of values) {
-            current_val |= v << shift;
-            shift += 7;
-            while (shift >= 8) {
-                result += (current_val & 0xff)
-                    .toString(16)
-                    .padStart(2, "0")
-                    .toUpperCase();
-                current_val >>= 8;
-                shift -= 8;
-            }
-        }
-        if (shift > 0)
-            result += (current_val & 0xff)
-                .toString(16)
-                .padStart(2, "0")
-                .toUpperCase();
-        return result;
-    } catch (e) {
-        return Buffer.from(ussd, "utf16be").toString("hex").toUpperCase();
-    }
-}
-
-// --- دالة مراقبة المنافذ (الـ Listener) ---
-async function watchPorts() {
-    setInterval(async () => {
-        try {
-            const ports = await SerialPort.list();
-
-            // فلترة منافذ هواوي
-            const currentUiPorts = ports
-                .filter((p) => p.friendlyName && p.friendlyName.includes("PC UI Interface"))
-                .map((p) => p.path);
-
-            // 1. اكتشاف فلاشات جديدة أو إعادة توصيل فلاشة سقطت (Error 433)
-            currentUiPorts.forEach((path) => {
-                // إذا كان المودم غير موجود، أو موجود ولكن المنفذ مغلق (حالة خطأ 433)
-                if (!activeModems[path] || (activeModems[path].port && !activeModems[path].port.isOpen)) {
-                    console.log(`🆕 Attempting to connect/reconnect: ${path}`);
-                    initSingleModem(path);
-                }
-            });
-
-            // 2. اكتشاف فلاشات تم فصلها فعلياً من الـ USB (مع debounce)
-            Object.keys(activeModems).forEach((path) => {
-                // تخطي الأجهزة الافتراضية (الهواتف) - تدار عبر Socket.IO
-                if (path.startsWith("phone-")) return;
-
-                if (!currentUiPorts.includes(path)) {
-                    const modemEntry = activeModems[path];
-                    if (!modemEntry) return;
-
-                    // زيادة عداد الفقدان
-                    modemEntry.removalCount = (modemEntry.removalCount || 0) + 1;
-
-                    // نحتاج دورة واحدة فقط (1 ثانية) قبل الحذف للسرعة القصوى
-                    if (modemEntry.removalCount < 1) {
-                        return;
-                    }
-
-                    console.log(`⚠️ Modem disconnected from USB: ${path}`);
-
-                    // تنظيف المؤقتات (Intervals) لمنع تعليق المعالج
-                    if (modemEntry.signalInterval) clearInterval(modemEntry.signalInterval);
-                    if (modemEntry.timeoutTimer) clearTimeout(modemEntry.timeoutTimer);
-
-                    // إغلاق المنفذ بأمان
-                    if (modemEntry.port && modemEntry.port.isOpen) {
-                        modemEntry.port.close((err) => {
-                            if (err) console.error(`Error closing ${path}:`, err.message);
-                        });
-                    }
-
-                    delete activeModems[path];
-                    broadcastModemList(); // تحديث القائمة فوراً للكل
-                } else {
-                    // الجهاز موجود - إعادة تعيين عداد الفقدان
-                    if (activeModems[path]?.removalCount) {
-                        activeModems[path].removalCount = 0;
-                    }
-                }
-            });
-        } catch (err) {
-            console.error("❌ Error in watchPorts loop:", err.message);
-        }
-    }, 1000);
-}
-
-// --- تهيئة منفذ واحد جديد ---
-// في دالة initSingleModem تأكد من تعريف الكائن كـ Object
-function initSingleModem(pathName) {
-    // 1. فحص استباقي لمنع تكرار فتح نفس المنفذ (تجنب خطأ 170)
-    if (activeModems[pathName] && activeModems[pathName].port && activeModems[pathName].port.isOpen) {
-        return;
-    }
-
-    try {
-        const port = new SerialPort({
-            path: pathName,
-            baudRate: 115200,
-            autoOpen: false // تعطيل الفتح التلقائي للتحكم في الأخطاء
-        });
-
-        const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
-
-        // متغيرات الحالة الخاصة بكل منفذ (توضع داخل النطاق لعدم التداخل)
-        let isListingSMS = false;
-        let currentSMSHeader = null;
-
-        // 2. محاولة الفتح اليدوي مع معالجة الأخطاء
-        port.open((err) => {
-            if (err) {
-                console.error(`🚫 Error opening ${pathName}: ${err.message}`);
-                return;
-            }
-
-            console.log(`✅ UI Port Opened: ${pathName}`);
-            // انتظر ثانيتين لضمان استقرار المودم ثم صفر الرسائل
-            setTimeout(() => {
-                clearAllSimMessages(pathName);
-            }, 2000);
-            // تهيئة كائن المودم بالكامل
-            activeModems[pathName] = {
-                port: port,
-                phoneNumber: null,
-                simSlot: 0,
-                isBusy: false,
-                currentOwner: null,
-                timeoutTimer: null,
-                isSearching: false,
-                removalCount: 0,
-                signal: 0,
-                signalInterval: null, // لتنظيفه لاحقاً
-                smsAssembler: {}, // مخزن خاص بهذه الفلاشة فقط
-                smsHeader: null
-            };
-
-            // 3. سلسلة أوامر التهيئة مع تأخيرات زمنية (Delays) لضمان عدم تشنج المودم
-            const sendAction = (cmd, delay) => setTimeout(() => port.isOpen && port.write(`${cmd}\r\n`), delay);
-
-            // 1. إلغاء الـ AutoRun والـ CD-ROM نهائياً من الهاردوير
-            // sendAction("AT^U2DIAG=0", 100);
-            sendAction("AT^CVOICE=0", 100);
-            sendAction("AT+CHUP", 200);
-            sendAction('AT+CMGF=0', 300); // التأكد من وضع النص
-            sendAction('AT+CSDH=1', 400); // إظهار رؤوس الرسائل بشكل تفصيلي
-            sendAction('AT+CSCS="UCS2"', 500);
-            sendAction("AT+CUSD=1", 600);
-            sendAction('AT+CPMS="ME","ME","ME"', 700);
-            sendAction("AT+CNMI=2,1,0,0,0", 800);
-            sendAction("AT+CLIP=1", 900); // تفعيل إظهار رقم المتصل
-
-            // بدء البحث عن الرقم تلقائياً
-            setTimeout(() => startAutoDetection(pathName), 3000);
-
-            // طلب قوة الإشارة بشكل دوري (كل 10 ثوانٍ)
-            activeModems[pathName].signalInterval = setInterval(() => {
-                if (activeModems[pathName]?.port?.isOpen) {
-                    activeModems[pathName].port.write("AT+CSQ\r\n");
-                }
-            }, 10000);
-
-            broadcastModemList();
-        });
 
 
-        // 4. معالجة البيانات الواردة (Parser)
-        parser.on("data", (line) => {
-            line = line.trim();
-            if (!line) return;
 
-            const modem = activeModems[pathName];
-            if (!modem) return;
-
-            // console.log(`📥 [${pathName}][${modem.phoneNumber || "Unknown"}] Received: "${line}"`);
-            // اكتشاف امتلاء الذاكرة
-            if (line.includes("^SMMEMFULL") || line.includes("+CMS ERROR: 322")) {
-                console.warn(`⚠️ [${pathName}][${activeModems[pathName]?.phoneNumber || "Unknown"}] SIM Memory Full! Clearing messages...`);
-
-                // إرسال أمر المسح الشامل
-                port.write("AT+CMGD=1,4\r\n", (err) => {
-                    if (err) console.error("Error clearing SIM:", err);
-                    else {
-                        console.log(`✅ [${pathName}] SIM Memory cleared successfully.`);
-                        // إظهار توست للمستخدم في الواجهة
-                        io.emit("toast-notification", {
-                            message: "تم تنظيف ذاكرة الشريحة تلقائياً لاستقبال رسائل جديدة",
-                            type: "warning"
-                        });
-                    }
-                });
-                return;
-            }
-
-
-            if (line === "OK" && modem.pendingDelete) {
-                modem.pendingDelete = false;
-                return;
-            }
-
-            // 2. معالجة الهيدر (تحسين التقاط الحالة)
-            if (line.startsWith("+CMGL:") || line.startsWith("+CMGR:")) {
-                console.log(`\n🔍 [DEBUG] Header Received: "${line}"`);
-                modem.isReadingSMS = true;
-                modem.smsHeader = line;
-
-                let extractedIndex;
-                if (line.startsWith("+CMGL:")) {
-                    extractedIndex = line.split(',')[0].split(': ')[1];
-                } else {
-                    extractedIndex = modem.tempReadingIndex;
-                }
-                modem.tempReadingIndex = extractedIndex || Date.now().toString();
-                return;
-            }
-
-            // 3. معالجة محتوى الرسالة (تعديل جوهري هنا)
-            if (modem.isReadingSMS) {
-                // إذا وصلنا لـ OK، فهذا يعني نهاية سطر الأمر الحالي، لكن لا نغلق الحالة 
-                // لأن هناك أجزاء أخرى قد تصل كأوامر منفصلة
-                if (line === "OK") {
-                    modem.isReadingSMS = false; // نغلق حالة القراءة الحالية فقط
-                    return;
-                }
-
-                // التأكد أن السطر هو PDU (أرقام Hex فقط وطويل)
-                if (/^[0-9A-Fa-f]{20,}$/.test(line)) {
-                    processIncomingSMS(pathName, line);
-                    return;
-                }
-            }
-
-            // 4. إشعار وصول رسالة جديدة (هام جداً للأجزاء التالية)
-            if (line.includes("+CMTI:")) {
-                const index = line.split(",")[1];
-                modem.tempReadingIndex = index;
-
-                // تأخير بسيط لضمان استقرار المودم قبل طلب الجزء التالي
-                setTimeout(() => {
-                    port.write(`AT+CMGR=${index}\r\n`);
-                }, 500);
-                return;
-            }
-
-
-            // 4. USSD والإشارة والمكالمات
-            if (line.includes("+CUSD:")) {
-                const match = line.match(/"([^"]+)"/);
-                if (match) handleUssdLogic(pathName, decodeSmart(match[1]).trim());
-            }
-
-            if (line.startsWith("+CSQ:")) {
-                const match = line.match(/\+CSQ:\s*(\d+),/);
-                if (match) {
-                    const rssi = parseInt(match[1]);
-                    const signalPercent = rssi === 99 ? 0 : Math.round((rssi / 31) * 100);
-                    modem.signal = signalPercent;
-                    io.emit("signal-update", { port: pathName, signal: signalPercent });
-                }
-            }
-
-            if (line.includes("RING") || line.startsWith("+CLIP:")) {
-                let text = "🔔 مكالمة واردة...";
-                if (line.startsWith("+CLIP:")) {
-                    const m = line.match(/"(\+?\d+)"/);
-                    text = `📞 متصل الآن: ${m ? m[1] : "رقم مخفي"}`;
-                }
-                io.emit("modem-data", { port: pathName, type: "call-incoming", content: text });
-            }
-
-            if (line === "OK") isListingSMS = false;
-        });
-
-        // 5. معالجة أحداث الخطأ والإغلاق
-        port.on("error", (err) => {
-            console.error(`🔥 Runtime Error on ${pathName}: ${err.message}`);
-        });
-
-        port.on("close", () => {
-            console.log(`🔌 Port ${pathName} closed.`);
-            if (activeModems[pathName]?.signalInterval) clearInterval(activeModems[pathName].signalInterval);
-            delete activeModems[pathName];
-            broadcastModemList();
-        });
-
-    } catch (e) {
-        console.error(`⚠️ Exception in initSingleModem: ${e.message}`);
-    }
-}
-
-// دالة مساعدة لمعالجة USSD وتحديث الرقم
-function handleUssdLogic(pathName, decoded) {
-    const phoneMatch = decoded.match(/(?:20)?(01[0125]\d{8})/) || decoded.match(/(?:20)(1[0125]\d{8})/);
-
-    if (phoneMatch && (activeModems[pathName].isSearching || /^(\+?201|01)\d{8,11}$/.test(decoded.replace(/\s/g, "")))) {
-        let num = phoneMatch[1];
-        if (num.startsWith("1")) num = "0" + num;
-        activeModems[pathName].phoneNumber = num;
-        activeModems[pathName].isSearching = false;
-
-        console.log(`📱 Number Detected for [${pathName}]: ${num}. Fetching stored SMS...`);
-
-        // --- التعديل الجديد: جلب الرسائل فور معرفة الرقم ---
-        fetchStoredMessages(pathName);
-
-        broadcastModemList();
-        return; // لا ترسل رسالة الرقم لشاشة المحادثة
-    }
-
-    // تخزين الرد للتطبيق (USB polling endpoint)
-    ussdResponses[pathName] = { response: decoded, timestamp: Date.now() };
-
-    // إرسال الرد للمستخدم الذي طلب الجلسة فقط
-    const payload = { port: pathName, type: "ussd", content: decoded };
-    const owner = activeModems[pathName].currentOwner || activeModems[pathName].lastRequester;
-    if (owner) io.to(owner).emit("modem-data", payload);
-    else io.emit("modem-data", payload);
-}
-// دالة جديدة لسحب الرسائل المخزنة
-function fetchStoredMessages(portPath) {
-    const modemEntry = activeModems[portPath];
-    if (modemEntry && modemEntry.port) {
-        const serial = modemEntry.port;
-        serial.write('AT+CMGF=0\r\n'); // وضع النص
-        setTimeout(() => serial.write('AT+CPMS="SM","SM","SM"\r\n'), 500); // ذاكرة الشريحة
-        setTimeout(() => serial.write('AT+CMGL="ALL"\r\n'), 1000); // جلب الكل
-    }
-}
 // دالة موحدة لإرسال قائمة المودمات بالشكل الجديد
 function broadcastModemList(toSocketId = null) {
     const list = Object.keys(activeModems).map((path) => {
@@ -3368,6 +2727,7 @@ app.get("/api/noip/settings", authenticateToken, isAdmin, async (req, res) => {
 // Auto-check No-IP on startup: compare DNS IP vs public IP, update if different
 async function noip_autoUpdateOnStartup() {
     try {
+        if (!db) { console.log('[No-IP AutoUpdate] Skipped — DB not ready'); return; }
         const rows = await db.all("SELECT key, value FROM settings WHERE key IN ('noip_hostname', 'noip_username', 'noip_password', 'noip_enabled')");
         const settings = {};
         rows.forEach(r => { settings[r.key] = r.value || ''; });
@@ -4496,42 +3856,23 @@ app.post("/send-ussd", authenticateToken, (req, res) => {
         return;
     }
 
-    // موديم فعلي (متصل عبر منفذ تسلسلي)
-    if (modemEntry.port) {
-        resetModemTimeout(portPath);
-
-        const pdu = encodeUSSD7bit(code);
-        modemEntry.port.write('AT+CSCS="UCS2"\r\n');
-
-        setTimeout(() => {
-            modemEntry.port.write(`AT+CUSD=1,"${pdu}",15\r\n`);
-            console.log(`📤 Sent PDU to ${portPath}: ${pdu} (${code})`);
-            res.json({ status: "sent", pdu: pdu });
-        }, 200);
-        broadcastModemList();
-    } else {
-        modemEntry.isBusy = false;
-        modemEntry.currentOwner = null;
-        res.status(404).json({ error: "Port not found" });
-    }
+    modemEntry.isBusy = false;
+    modemEntry.currentOwner = null;
+    res.status(404).json({ error: "Port not found" });
 });
 
 app.post("/cancel-ussd", (req, res) => {
     const { portPath, socketId } = req.body;
     const modemEntry = activeModems[portPath];
 
-    // 1. فحص وجود المودم
     if (!modemEntry) {
         return res.status(404).json({ error: "المنفذ غير موجود" });
     }
 
-    // 2. الفحص الجوهري: هل السوكيت الذي يطلب الإلغاء هو المالك الحالي للسيشن؟
     if (modemEntry.isBusy && modemEntry.currentOwner === socketId) {
 
         if (modemEntry.isVirtual) {
             io.to(modemEntry.socketId).emit("ussd-cancel-command", { simSlot: modemEntry.simSlot });
-        } else {
-            modemEntry.port.write("AT+CUSD=2\r\n");
         }
 
         if (modemEntry.timeoutTimer) clearTimeout(modemEntry.timeoutTimer);
@@ -4546,7 +3887,6 @@ app.post("/cancel-ussd", (req, res) => {
 
         return res.json({ status: "terminated", message: "تم إنهاء الجلسة بنجاح" });
     } else {
-        // إذا حاول مستخدم آخر إلغاء سيشن ليست له
         console.warn(`🚫 Unauthorized cancel attempt from ${socketId} on ${portPath}`);
         return res.status(403).json({
             error: "لا يمكنك إنهاء جلسة لم تبدأها أنت، أو أن الجلسة منتهية بالفعل."
@@ -5119,8 +4459,6 @@ function setupConnectionHandler(socket) {
 
                 if (entry.isVirtual && entry.socketId) {
                     io.to(entry.socketId).emit("ussd-cancel-command", { simSlot: entry.simSlot });
-                } else if (entry.port) {
-                    entry.port.write("AT+CUSD=2\r\n");
                 }
 
                 entry.isBusy = false;
@@ -5136,59 +4474,7 @@ function setupConnectionHandler(socket) {
 
 }
 
-app.post("/auto-detect-number", (req, res) => {
-    const { portPath } = req.body;
-    const modemEntry = activeModems[portPath];
 
-    if (modemEntry && modemEntry.port) {
-        activeModems[portPath].isSearching = true; // تفعيل الحالة فوراً
-        console.log(`🔍 Searching mode activated for ${portPath}`);
-        // الأكواد الخاصة بالشبكات المصرية
-        const codes = ["*947#", "*878#", "*688#"];
-
-        console.log(`🚀 Start detection for ${portPath}`);
-
-        codes.forEach((code, index) => {
-            setTimeout(() => {
-                // الفحص السحري: لو الرقم اتلقى فعلاً في محاولة سابقة، وقف التنفيذ
-                if (activeModems[portPath] && activeModems[portPath].phoneNumber) {
-                    console.log(
-                        `🛑 Stopping detection on ${portPath} (Number already found)`,
-                    );
-                    return;
-                }
-
-                const pdu = encodeUSSD7bit(code);
-                const serial = modemEntry.port;
-
-                serial.write('AT+CSCS="UCS2"\r\n');
-                setTimeout(() => {
-                    serial.write(`AT+CUSD=1,"${pdu}",15\r\n`);
-                    console.log(`📡 Trying: ${code} on ${portPath}`);
-                }, 200);
-            }, index * 5000); // زيادة المهلة لـ 5 ثواني لضمان رد الشبكة
-        });
-
-        res.json({ status: "processing" });
-    } else {
-        res.status(404).json({ error: "Port not found" });
-    }
-});
-
-// مسار فحص القفل
-app.post("/check-lock", (req, res) => {
-    const { portPath } = req.body;
-    const modemEntry = activeModems[portPath];
-
-    if (modemEntry && modemEntry.port) {
-        // إرسال الأوامر للمنفذ الصحيح
-        modemEntry.port.write("AT^CARDLOCK?\r\n");
-        modemEntry.port.write('AT+CLCK="PN",2\r\n');
-        res.json({ status: "checking" });
-    } else {
-        res.status(404).json({ error: "Port not found" });
-    }
-});
 
 function resetModemTimeout(pathName) {
     const modemEntry = activeModems[pathName];
@@ -5212,8 +4498,6 @@ function resetModemTimeout(pathName) {
             if (info) {
                 io.to(entry.socketId).emit("ussd-cancel-command", { simSlot: entry.simSlot });
             }
-        } else if (entry.port) {
-            entry.port.write("AT+CUSD=2\r\n");
         }
 
         if (entry.currentOwner) {
@@ -5230,208 +4514,6 @@ function resetModemTimeout(pathName) {
         entry.expiryTime = null;
         broadcastModemList();
     }, duration);
-}
-
-function startAutoDetection(pathName) {
-    const modemEntry = activeModems[pathName];
-    if (!modemEntry || !modemEntry.port) return;
-
-    modemEntry.isSearching = true;
-    // console.log(`🚀 Auto-detecting number for new modem: ${pathName}`);
-
-    const codes = ["*947#", "*878#", "*688#"];
-
-    codes.forEach((code, index) => {
-        setTimeout(() => {
-            // توقف إذا تم العثور على الرقم أو تم فصل الفلاشة
-            if (!activeModems[pathName] || activeModems[pathName].phoneNumber) return;
-
-            const pdu = encodeUSSD7bit(code);
-            const serial = modemEntry.port;
-
-            serial.write('AT+CSCS="UCS2"\r\n');
-            setTimeout(() => {
-                if (activeModems[pathName]) {
-                    serial.write(`AT+CUSD=1,"${pdu}",15\r\n`);
-                    console.log(`📡 [Auto] Trying: ${code} on ${pathName}`);
-                }
-            }, 500);
-        }, index * 6000); // مهلة 6 ثوانٍ بين كل محاولة
-    });
-}
-
-app.post("/make-call", (req, res) => {
-    const { portPath, phoneNumber } = req.body;
-    const modemEntry = activeModems[portPath];
-
-    if (modemEntry && modemEntry.port) {
-        const serial = modemEntry.port;
-
-        // 1. تحويل لوضع الـ GSM وتغيير التشفير
-        serial.write('AT+CSCS="IRA"\r\n');
-        setTimeout(() => serial.write("AT^CVOICE=0\r\n"), 100);
-        setTimeout(() => serial.write("AT^DDSET=1\r\n"), 200); // فتح قناة الصوت الرقمية
-
-        setTimeout(() => {
-            const cleanNumber = phoneNumber.replace(/\s/g, "");
-            // 2. تجربة الاتصال بالصيغة الدولية الكاملة (حتى لو الرقم محلي)
-            // أحياناً المودم يحتاج +2 قبل الرقم ليقبل الطلب
-            const internationalNumber = cleanNumber.startsWith("01")
-                ? `+2${cleanNumber}`
-                : cleanNumber;
-
-            const dialCommand = `ATD${internationalNumber};\r\n`;
-
-            serial.write(dialCommand);
-            console.log(`📡 Final Attempt Calling: ${internationalNumber}`);
-
-            res.json({ status: "calling" });
-        }, 500);
-    }
-});
-
-app.post("/send-dtmf", (req, res) => {
-    const { portPath, digit } = req.body;
-    const modemEntry = activeModems[portPath];
-
-    if (modemEntry && modemEntry.port) {
-        // AT+VTS يسمح بإرسال نغمة الرقم للطرف الآخر ليسمعها النظام الآلي
-        modemEntry.port.write(`AT+VTS=${digit}\r\n`);
-        console.log(`🎹 Sending DTMF Digit: ${digit} on ${portPath}`);
-        res.json({ status: "digit_sent" });
-    } else {
-        res.status(404).json({ error: "Port not found" });
-    }
-});
-
-// server.listen(5000, () => {
-//   console.log("🚀 Server running: http://localhost:5000");
-//   watchPorts(); // تشغيل الـ Listener
-// });
-
-
-app.post("/list-messages", (req, res) => {
-    const { portPath } = req.body;
-    const modemEntry = activeModems[portPath];
-
-    if (modemEntry && modemEntry.port) {
-        const serial = modemEntry.port;
-
-        // سلسلة أوامر تضمن الوصول للرسائل
-        serial.write('AT+CMGF=0\r\n'); // وضع النص
-
-        setTimeout(() => {
-            // المحاولة الأولى: ذاكرة الشريحة (SIM)
-            serial.write('AT+CPMS="SM"\r\n');
-        }, 200);
-
-        setTimeout(() => {
-            // طلب كل الرسائل (ALL)
-            serial.write('AT+CMGL="4"\r\n');
-        }, 400);
-
-        // محاولة ثانية احتياطية بعد ثانية واحدة لذاكرة الهاتف
-        setTimeout(() => {
-            serial.write('AT+CPMS="ME"\r\n');
-            setTimeout(() => serial.write('AT+CMGL="ALL"\r\n'), 200);
-        }, 1500);
-
-        res.json({ status: "fetching" });
-    }
-});
-
-async function processIncomingSMS(pathName, rawLine) {
-    const modem = activeModems[pathName];
-    if (!modem) return;
-
-    let line = rawLine.trim();
-    if (!/^[0-9A-Fa-f]{20,}$/.test(line)) return;
-
-    try {
-        const sender = extractSenderFromPDU(line);
-        const timestamp = normalizeTimestampDigits(extractTimestampFromPDU(line));
-
-        let refNumber = "SINGLE";
-        let partIndex = 1;
-        let totalParts = 1;
-
-        if (line.includes("050003")) {
-            let udhPos = line.indexOf("050003");
-            refNumber = line.substring(udhPos + 6, udhPos + 8);
-            totalParts = parseInt(line.substring(udhPos + 8, udhPos + 10), 16);
-            partIndex = parseInt(line.substring(udhPos + 10, udhPos + 12), 16);
-        }
-
-        const bufferKey = `${pathName}_${sender}_${refNumber}`;
-
-        if (!smsProcessingBuffer[bufferKey]) {
-            smsProcessingBuffer[bufferKey] = {
-                parts: new Array(totalParts).fill(null),
-                indices: [],
-                sender: sender,
-                timestamp: timestamp,
-                receivedCount: 0
-            };
-        }
-
-        const data = smsProcessingBuffer[bufferKey];
-
-        let decodedPart = decodeSmart1(line);
-        if (!data.parts[partIndex - 1]) {
-            data.parts[partIndex - 1] = decodedPart;
-            data.receivedCount++;
-            if (modem.tempReadingIndex) data.indices.push(modem.tempReadingIndex);
-        }
-
-        console.log(`📥 [${pathName}] Part ${data.receivedCount}/${totalParts} (Ref: ${refNumber})`);
-
-        if (data.receivedCount === totalParts) {
-            console.log(`✅ All ${totalParts} parts collected. Finalizing message...`);
-
-            if (data.cleanupTimer) clearTimeout(data.cleanupTimer);
-
-            let fullContent = data.parts.join("");
-            fullContent = fullContent.trim();
-            fullContent = fixLanguageJunctions(fullContent);
-
-            const receiver = modem.phoneNumber || "Unknown";
-
-            // كشف نوع المعاملة قبل الحفظ
-            const txType4 = await detectTransactionType(data.sender, fullContent);
-
-            await saveAndEmitUnique({
-                port: pathName,
-                receiver: receiver,
-                sender: data.sender,
-                content: fullContent,
-                timestamp: data.timestamp,
-                msgIndex: data.indices.length > 0 ? parseInt(data.indices[0]) : null,
-                simSlot: modem.simSlot || 0,
-                type: "sms",
-                transactionType: txType4?.type || null
-            });
-
-            await processMessageWithRules(receiver, data.sender, fullContent, data.timestamp);
-
-            delete smsProcessingBuffer[bufferKey];
-
-            if (data.indices && data.indices.length > 0) {
-                clearAllSimMessages(pathName);
-            }
-
-        } else {
-            if (data.cleanupTimer) clearTimeout(data.cleanupTimer);
-            data.cleanupTimer = setTimeout(() => {
-                if (smsProcessingBuffer[bufferKey]) {
-                    console.warn(`🗑️ [Cleanup] Removing incomplete message (Ref: ${refNumber}) from memory.`);
-                    delete smsProcessingBuffer[bufferKey];
-                }
-            }, 2 * 60 * 1000);
-        }
-
-    } catch (err) {
-        console.error(`❌ Error in processIncomingSMS:`, err.message);
-    }
 }
 
 async function autoAnalyzePendingMessages() {
@@ -5990,24 +5072,8 @@ app.post("/delete-conversation", async (req, res) => {
         res.status(500).json({ success: false });
     }
 });
-// هذا الأمر يمسح جميع الرسائل المقروءة والمستلمة من الشريحة دفعة واحدة
-function clearAllSimMessages(portPath) {
-    const modem = activeModems[portPath];
-    if (modem && modem.port) {
-        // AT+CMGD=1,4 تعني مسح كل الرسائل من الذاكرة
-        modem.port.write(`AT+CMGD=1,4\r\n`);
-        console.log(`🧹 Full SIM cleanup started on ${portPath}`);
-    }
-}
-app.post("/clear-sim", authenticateToken, isAdmin, (req, res) => {
-    const { port } = req.body;
-    if (activeModems[port]) {
-        clearAllSimMessages(port);
-        res.json({ success: true, message: "جاري تصفير الشريحة..." });
-    } else {
-        res.status(404).json({ error: "المودم غير متصل" });
-    }
-});
+
+
 
 // ======================== Helper Functions ========================
 function normalizeNumber(value) {
@@ -6824,114 +5890,112 @@ async function getConversations(userId) {
 
 function fixLanguageJunctions(text) {
     if (!text) return "";
-
-    // 1. إضافة مسافة بين حرف إنجليزي/رقم يليه حرف عربي
-    // [a-zA-Z0-9] -> إنجليزي أو رقم
-    // [\u0600-\u06FF] -> نطاق الحروف العربية
     let fixedText = text.replace(/([a-zA-Z0-9])([\u0600-\u06FF])/g, '$1 $2');
-
-    // 2. إضافة مسافة بين حرف عربي يليه حرف إنجليزي/رقم
     fixedText = fixedText.replace(/([\u0600-\u06FF])([a-zA-Z0-9])/g, '$1 $2');
-
-    // 3. تنظيف المسافات المزدوجة التي قد تنتج عن العملية
     return fixedText.replace(/\s+/g, ' ').trim();
 }
 
-ipcMain.on('run-start-script', (event) => {
-    console.log("Starting Cloudflare tunnel...");
-    const scriptPath = path.join(resourcesPath, 'start-cloudflare-server.bat');
-    exec(`"${scriptPath}"`, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error starting Cloudflare: ${error}`);
-            event.reply('server-status', { status: 'error', message: error.message });
-            return;
-        }
-        console.log(`Cloudflare started: ${stdout}`);
-        event.reply('server-status', { status: 'running', message: 'Cloudflare tunnel started successfully' });
-    });
-});
+// ======================== Start Standalone Server ========================
+const httpsPort = 29001;
+const httpPort = 29000;
 
-ipcMain.on('run-stop-script', (event) => {
-    console.log("Stopping Cloudflare tunnel...");
-    const scriptPath = path.join(resourcesPath, 'stop-cloudflare-server.bat');
-    exec(`"${scriptPath}"`, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error stopping Cloudflare: ${error}`);
-            event.reply('server-status', { status: 'error', message: error.message });
-            return;
-        }
-        console.log(`Cloudflare stopped: ${stdout}`);
-        event.reply('server-status', { status: 'stopped', message: 'Cloudflare tunnel stopped successfully' });
-    });
-});
+function ensureCertificates(certsDir) {
+    const keyPath = path.join(certsDir, 'server.key');
+    const certPath = path.join(certsDir, 'server.crt');
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) return;
 
-// في ملف main.js
-ipcMain.on('stop-server', () => {
-    const { exec } = require('child_process');
-
-    // إغلاق نفق كلاود فلير
-
-
-    stopCloudflare();
-
-
-    // إغلاق سيرفر النود (تأكد من تحديد العملية الصحيحة لكي لا يغلق الـ Electron نفسه)
-    // إذا كان السيرفر يعمل على منفذ 5000 يمكنك استهدافه هكذا:
-    // exec('for /f "tokens=5" %a in (\'netstat -aon ^| findstr :5000\') do taskkill /f /pid %a');
-});
-
-function ensureAdmin() {
-    // أمر fltmc هو الأدق لفحص صلاحيات المسؤول في ويندوز
-    exec('fltmc', (err) => {
-        if (err) {
-            console.log("البرنامج لا يملك صلاحيات مسؤول، جاري الطلب...");
-
-            const choice = dialog.showMessageBoxSync({
-                type: 'warning',
-                title: 'صلاحيات المسؤول مطلوبة',
-                message: 'يحتاج البرنامج لصلاحيات المسؤول لتشغيل السيرفر ونفق Cloudflare بشكل صحيح.',
-                buttons: ['تشغيل كمسؤول', 'إغلاق'],
-                defaultId: 0,
-                cancelId: 1
-            });
-
-            if (choice === 0) {
-                // استخدام PowerShell لطلب الصلاحية وإعادة تشغيل التطبيق
-                const exePath = process.executablePath;
-                const command = `Start-Process "${exePath}" -Verb RunAs`;
-
-                exec(`powershell -Command "${command}"`, (psErr) => {
-                    if (!psErr) electronApp.quit(); // أغلق النسخة الحالية فقط إذا نجح طلب الصلاحية
-                });
-            } else {
-                electronApp.quit(); // أغلق إذا رفض المستخدم
-            }
-        } else {
-            console.log("تم التأكد: البرنامج يعمل بصلاحيات مسؤول ✅");
-        }
-    });
+    console.log('Generating self-signed SSL certificates...');
+    try {
+        const forge = require('node-forge');
+        const pki = forge.pki;
+        const keys = pki.rsa.generateKeyPair(2048);
+        const cert = pki.createCertificate();
+        cert.publicKey = keys.publicKey;
+        cert.serialNumber = Date.now().toString(16);
+        cert.validity.notBefore = new Date();
+        cert.validity.notAfter = new Date();
+        cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 10);
+        const attrs = [{ name: 'commonName', value: 'localhost' }, { name: 'organizationName', value: 'SMS Gateway' }];
+        cert.setSubject(attrs);
+        cert.setIssuer(attrs);
+        cert.setExtensions([
+            { name: 'basicConstraints', cA: true },
+            { name: 'keyUsage', keyCertSign: true, digitalSignature: true, keyEncipherment: true },
+            { name: 'subjectAltName', altNames: [{ type: 2, value: 'localhost' }, { type: 7, ip: '127.0.0.1' }] }
+        ]);
+        cert.sign(keys.privateKey, forge.md.sha256.create());
+        if (!fs.existsSync(certsDir)) fs.mkdirSync(certsDir, { recursive: true });
+        fs.writeFileSync(keyPath, pki.privateKeyToPem(keys.privateKey));
+        fs.writeFileSync(certPath, pki.certificateToPem(cert));
+        console.log('Self-signed SSL certificates generated');
+    } catch (e) {
+        console.error('Failed to generate SSL certificates:', e.message);
+    }
 }
 
-// استدعاء الدالة
-const stopCloudflare = () => {
-    console.log("برجاء الانتظار، جاري تنظيف عمليات Cloudflare...");
+(async () => {
+    const certsDir = path.join(__dirname, 'certs');
+    ensureCertificates(certsDir);
 
-    // 1. محاولة إيقاف الخدمة إذا كانت موجودة (لضمان عدم العودة)
-    exec('sc stop cloudflared', () => {
+    const letsencryptCertPath = path.join(certsDir, 'letsencrypt_cert.pem');
+    const letsencryptKeyPath = path.join(certsDir, 'letsencrypt_key.pem');
+    let httpsOptions;
+    try {
+        if (fs.existsSync(letsencryptCertPath) && fs.existsSync(letsencryptKeyPath)) {
+            console.log('Using Let\'s Encrypt SSL certificate');
+            httpsOptions = {
+                key: fs.readFileSync(letsencryptKeyPath),
+                cert: fs.readFileSync(letsencryptCertPath)
+            };
+        } else {
+            httpsOptions = {
+                key: fs.readFileSync(path.join(certsDir, 'server.key')),
+                cert: fs.readFileSync(path.join(certsDir, 'server.crt'))
+            };
+        }
+    } catch (e) {
+        console.error('Failed to load certificates for HTTPS:', e.message);
+        httpsOptions = null;
+    }
 
-        // 2. قتل العملية وشجرتها بالكامل بقوة
-        // /f للقوة، /t لقتل العمليات التابعة
-        exec('taskkill /f /t /im cloudflared.exe', (err) => {
-            if (err) {
-                console.log("لم يتم العثور على عمليات نشطة.");
-            } else {
-                console.log("تم إغلاق النفق بنجاح.");
-            }
+    if (!httpsOptions) {
+        console.error('Failed to load SSL certificates. Starting HTTP only...');
+        const httpServer = http.createServer(app);
+        io = new Server(httpServer, {
+            cors: { origin: (origin, callback) => callback(null, true), methods: ["GET", "POST"], credentials: true },
+            transports: ['websocket', 'polling'],
+            pingInterval: 5000, pingTimeout: 8000, connectTimeout: 10000,
+            allowUpgrades: true, maxHttpBufferSize: 1e6, perMessageDeflate: false
         });
+        _mainIo = io;
+        io.use(setupSocketIo);
+        io.on("connection", setupConnectionHandler);
+        httpServer.listen(httpPort, '0.0.0.0', () => {
+            console.log(`HTTP Server running on http://${getLocalIP()}:${httpPort}`);
+            noip_autoUpdateOnStartup();
+        });
+        return;
+    }
+
+    const httpsServer = https.createServer(httpsOptions, app);
+    io = new Server(httpsServer, {
+        cors: { origin: (origin, callback) => callback(null, true), methods: ["GET", "POST"], credentials: true },
+        transports: ['websocket', 'polling'],
+        pingInterval: 5000, pingTimeout: 8000, connectTimeout: 10000,
+        allowUpgrades: true, maxHttpBufferSize: 1e6, perMessageDeflate: false
     });
-};
+    _mainIo = io;
+    io.use(setupSocketIo);
+    io.on("connection", setupConnectionHandler);
 
-
-
+    httpsServer.listen(httpsPort, '0.0.0.0', (err) => {
+        if (err) {
+            console.error('Failed to start HTTPS server:', err);
+            return;
+        }
+        console.log(`HTTPS Server running on https://${getLocalIP()}:${httpsPort}`);
+        noip_autoUpdateOnStartup();
+    });
+})();
 
 
