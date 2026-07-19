@@ -7,6 +7,14 @@ var countdownInterval = null;
 var isSessionActive = false;
 var isCallAcive = false;
 
+(function initPhoneDisplay() {
+    if (!portSelector) return;
+    var list = window.localModemList || [];
+    if (list.length === 0) return;
+    var selected = list.find(function(m) { return m.path === portSelector.value; }) || list[0];
+    if (selected) updateDisplay(selected);
+})();
+
 function getCode() {
   return Array.from(codeInput.querySelectorAll(".digit")).map(s => s.textContent).join("");
 }
