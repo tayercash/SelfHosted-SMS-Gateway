@@ -26,6 +26,7 @@
   "login.error_failed": "فشل تسجيل الدخول",
   "login.reset": "تسجيل الدخول",
   "login.error_network": "عذراً، يرجى التحقق من توفر الخادم",
+  "login.welcome": "مرحباً بك في بوابة الرسائل القصيرة",
   "login.reset2": "تسجيل الدخول",
   "install.title": "تثبيت النظام",
   "install.tagline": "بوابة الرسائل الإلكترونية والجهاز",

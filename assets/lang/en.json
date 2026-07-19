@@ -26,6 +26,7 @@
   "login.error_failed": "Login failed",
   "login.reset": "Login",
   "login.error_network": "Sorry, please check that the server is available",
+  "login.welcome": "Welcome to SMS Gateway",
   "login.reset2": "Login",
   "install.title": "System Installation",
   "install.tagline": "Electronic Message Gateway & Device",

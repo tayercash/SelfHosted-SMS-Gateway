@@ -127,6 +127,29 @@
       letter-spacing: 0.5px;
     }
 
+    .welcome-text {
+      font-size: 0.92rem;
+      color: #ccc;
+      margin: 8px 0 20px;
+      line-height: 1.6;
+    }
+
+    .welcome-text .wave {
+      display: inline-block;
+      animation: wave 1.5s infinite;
+      transform-origin: 70% 70%;
+    }
+
+    @keyframes wave {
+      0%, 60%, 100% { transform: rotate(0deg); }
+      10% { transform: rotate(14deg); }
+      20% { transform: rotate(-8deg); }
+      30% { transform: rotate(14deg); }
+      40% { transform: rotate(-4deg); }
+      50% { transform: rotate(10deg); }
+      60% { transform: rotate(0deg); }
+    }
+
     .input-group {
       margin-bottom: 22px;
       text-align: right;
@@ -265,6 +288,7 @@
       </div>
       <h1 class="app-name">SMS Gateway</h1>
       <p class="app-tagline" data-i18n="login.tagline">بوابة الرسائل الإلكترونية والجهاز</p>
+      <p class="welcome-text"><span class="wave">👋</span> <span data-i18n="login.welcome">مرحباً بك في بوابة الرسائل القصيرة</span></p>
     </div>
 
     <form id="login-form" autocomplete="off">
