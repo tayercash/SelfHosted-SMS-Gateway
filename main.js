@@ -97,61 +97,7 @@ const _vPending = new Map();
 // ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 // Embedded activation page HTML (no external file needed)
 // ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-const _NO_INTERNET_HTML = `<!DOCTYPE html>
-<html lang="ar">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>No Internet</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-:root{--primary:#ffcc00;--primary-hover:#ff9900;--warning:#ff9f43;--error:#ef4444;--text-primary:#fff;--text-secondary:#888;--text-muted:#666}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Noto Sans Arabic','Segoe UI',system-ui,-apple-system,sans-serif;background:#0d0d12;color:#e0e0e0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 16px}
-.locked-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 0%,rgba(255,204,0,0.06) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(100,150,255,0.03) 0%,transparent 50%);z-index:0;pointer-events:none}
-.container{position:relative;z-index:1;width:100%;max-width:400px}
-.lock-card{background:rgba(20,20,26,0.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.06);border-radius:24px;padding:40px 28px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.5)}
-.logo{width:64px;height:64px;background:linear-gradient(135deg,rgba(239,68,68,0.2),rgba(239,68,68,0.08));border:1px solid rgba(239,68,68,0.2);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:1.8rem}
-h1{font-size:1.2rem;font-weight:800;color:var(--text-primary);margin-bottom:8px}
-.subtitle{color:var(--text-secondary);font-size:.85rem;line-height:1.6;margin-bottom:24px}
-.spinner{width:28px;height:28px;border:3px solid rgba(255,255,255,0.06);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.status{color:var(--text-muted);font-size:.82rem}
-.retry-count{color:var(--primary);font-weight:600;font-family:monospace}
-.fade-in{animation:fadeIn .35s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-</style>
-</head>
-<body>
-<div class="locked-bg"></div>
-<div class="container">
-<div class="lock-card fade-in">
-<div class="logo">&#x1f4f6;</div>
-<h1 id="ni-title">┘ä╪º ┘è┘ê╪¼╪» ╪º╪¬╪╡╪º┘ä ╪¿╪º┘ä╪Ñ┘å╪¬╪▒┘å╪¬</h1>
-<p class="subtitle" id="ni-subtitle">┘è╪¬┘à ╪º┘ä╪¬╪¡┘é┘é ┘à┘å ╪º┘ä╪º╪¬╪╡╪º┘ä ╪¬┘ä┘é╪º╪ª┘è╪º┘ï</p>
-<div class="spinner"></div>
-<p class="status"><span id="ni-status">╪¼╪º╪▒┘è ╪º┘ä╪¬╪¡┘é┘é...</span> <span class="retry-count" id="ni-count"></span></p>
-</div>
-</div>
-<script>
-var _lang=localStorage.getItem('mouguard_lang')||'ar';
-var _t={ar:{title:'┘ä╪º ┘è┘ê╪¼╪» ╪º╪¬╪╡╪º┘ä ╪¿╪º┘ä╪Ñ┘å╪¬╪▒┘å╪¬',subtitle:'┘è╪¬┘à ╪º┘ä╪¬╪¡┘é┘é ┘à┘å ╪º┘ä╪º╪¬╪╡╪º┘ä ╪¬┘ä┘é╪º╪ª┘è╪º┘ï',checking:'╪¼arResult ╪º┘ä╪¬╪¡┘é┘é...',count:'┘à╪▒╪¡╪¿╪º┘ï %d'},en:{title:'No Internet Connection',subtitle:'Checking connection automatically',checking:'Checking connection...',count:'Attempt %d'}};
-function __(k){return(_t[_lang]&&_t[_lang][k])?_t[_lang][k]:k}
-var _attempts=0;
-function updateUI(){
-    _attempts++;
-    document.getElementById('ni-title').textContent=__('title');
-    document.getElementById('ni-subtitle').textContent=__('subtitle');
-    document.getElementById('ni-status').textContent=__('checking');
-    document.getElementById('ni-count').textContent='#'+_attempts;
-}
-updateUI();
-setInterval(function(){updateUI();window.location.reload()},5000);
-</script>
-</body>
-</html>`;
+const _NO_INTERNET_HTML = '<!DOCTYPE html><html lang="ar"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>No Internet</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>:root{--primary:#ffcc00;--primary-hover:#ff9900;--warning:#ff9f43;--error:#ef4444;--text-primary:#fff;--text-secondary:#888;--text-muted:#666}*{margin:0;padding:0;box-sizing:border-box}body{font-family:\'Noto Sans Arabic\',\'Segoe UI\',system-ui,-apple-system,sans-serif;background:#0d0d12;color:#e0e0e0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 16px}.locked-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 0%,rgba(255,204,0,0.06) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(100,150,255,0.03) 0%,transparent 50%);z-index:0;pointer-events:none}.container{position:relative;z-index:1;width:100%;max-width:400px}.lock-card{background:rgba(20,20,26,0.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.06);border-radius:24px;padding:40px 28px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.5)}.logo{width:64px;height:64px;background:linear-gradient(135deg,rgba(239,68,68,0.2),rgba(239,68,68,0.08));border:1px solid rgba(239,68,68,0.2);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:1.8rem}h1{font-size:1.2rem;font-weight:800;color:var(--text-primary);margin-bottom:8px}.subtitle{color:var(--text-secondary);font-size:.85rem;line-height:1.6;margin-bottom:24px}.spinner{width:28px;height:28px;border:3px solid rgba(255,255,255,0.06);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}@keyframes spin{to{transform:rotate(360deg)}}.status{color:var(--text-muted);font-size:.82rem}.retry-count{color:var(--primary);font-weight:600;font-family:monospace}.fade-in{animation:fadeIn .35s ease}@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}</style></head><body><div class="locked-bg"></div><div class="container"><div class="lock-card fade-in"><div class="logo">&#x1f4f6;</div><h1 id="ni-title"></h1><p class="subtitle" id="ni-subtitle"></p><div class="spinner"></div><p class="status"><span id="ni-status"></span> <span class="retry-count" id="ni-count"></span></p></div></div><script>var _lang=localStorage.getItem(\'mouguard_lang\')||\'ar\';var _t={ar:{title:"\u0644\u0627 \u064a\u0648\u062c\u062f \u0627\u062a\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062a\u0631\u0646\u062a",subtitle:"\u064a\u062a\u0645 \u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u062a\u0644\u0642\u0627\u0626\u064a\u0627\u064b",checking:"\u062c\u0627\u0631\u064a \u0627\u0644\u062a\u062d\u0642\u0642...",count:"\u0645\u062d\u0627\u0648\u0644\u0629 %d"},en:{title:"No Internet Connection",subtitle:"Checking connection automatically",checking:"Checking connection...",count:"Attempt %d"}};function __(k){return(_t[_lang]&&_t[_lang][k])?_t[_lang][k]:k}var _attempts=0;function updateUI(){_attempts++;document.getElementById(\'ni-title\').textContent=__(\'title\');document.getElementById(\'ni-subtitle\').textContent=__(\'subtitle\');document.getElementById(\'ni-status\').textContent=__(\'checking\');document.getElementById(\'ni-count\').textContent=\'#\'+_attempts}updateUI();setInterval(function(){updateUI();window.location.reload()},5000);</script></body></html>';
 
 const _ACTIVATE_HTML = `<!DOCTYPE html>
 <html lang="ar">
@@ -222,23 +168,23 @@ input::placeholder{color:var(--text-muted)}
 <div class="container">
 <div class="lock-card">
 <div class="lang-bar">
-<button class="lang-btn active" data-lang="ar" onclick="switchLang('ar')">╪º┘ä╪╣╪▒╪¿┘è╪⌐</button>
+<button class="lang-btn active" data-lang="ar" onclick="switchLang('ar')" id="lang-ar-btn">\u0627\u0644\u0639\u0631\u0628\u064a\u0629</button>
 <button class="lang-btn" data-lang="en" onclick="switchLang('en')">English</button>
 </div>
 <div class="logo">&#x1f6e1;</div>
-<div id="loading-state" class="loading"><div class="spinner"></div><span data-i18n="loading">╪¼╪º╪▒┘è ╪º┘ä╪¬╪¡┘à┘è┘ä...</span></div>
+<div id="loading-state" class="loading"><div class="spinner"></div><span data-i18n="loading"></span></div>
 <div id="no-license-state" class="hidden fade-in">
-<h1 data-i18n="activate_title">&#x1f510; ╪¬┘ü╪╣┘è┘ä ╪º┘ä╪¬╪▒╪«┘è╪╡</h1>
-<p class="subtitle" data-i18n="activate_subtitle">╪ú╪»╪«┘ä ┘à┘ü╪¬╪º╪¡ ╪º┘ä╪¬╪▒╪«┘è╪╡ ┘ä╪¬┘ü╪╣┘è┘ä ╪º┘ä╪¬╪╖╪¿┘è┘é</p>
-<span class="badge mute" data-i18n="badge_inactive">&#x26a0; ╪║┘è╪▒ ┘à┘ü╪╣┘ä</span>
+<h1 data-i18n="activate_title"></h1>
+<p class="subtitle" data-i18n="activate_subtitle"></p>
+<span class="badge mute" data-i18n="badge_inactive"></span>
 <hr>
-<div class="input-group"><label data-i18n="license_key_label">┘à┘ü╪¬╪º╪¡ ╪º┘ä╪¬╪▒╪«┘è╪╡</label><input type="text" id="license-input" placeholder="XXXX-XXXX-XXXX-XXXX" spellcheck="false" dir="ltr" autocomplete="off"></div>
-<button class="btn btn-primary" onclick="submitActivation()"><span data-i18n="activate_btn">&#x2713; ╪¬┘ü╪╣┘è┘ä</span></button>
+<div class="input-group"><label data-i18n="license_key_label"></label><input type="text" id="license-input" placeholder="XXXX-XXXX-XXXX-XXXX" spellcheck="false" dir="ltr" autocomplete="off"></div>
+<button class="btn btn-primary" onclick="submitActivation()"><span data-i18n="activate_btn"></span></button>
 <div id="msg"></div>
 <hr>
-<p style="font-size:.78rem;color:var(--text-muted);margin-bottom:6px;" data-i18n="no_license_prompt">┘ä┘è╪│ ┘ä╪»┘è┘â ╪¬╪▒╪«┘è╪╡╪ƒ</p>
-<a class="btn btn-warning" id="buy-link" href="#" target="_blank" data-i18n="buy_btn">&#x1f6d2; ╪┤╪▒╪º╪í ╪¬╪▒╪«┘è╪╡ ╪¼╪»┘è╪»</a>
-<a class="btn btn-outline" id="renew-link" href="#" target="_blank" style="margin-top:6px;" data-i18n="renew_btn">&#x1f504; ╪¬╪¼╪»┘è╪» ╪º┘ä╪¬╪▒╪«┘è╪╡</a>
+<p style="font-size:.78rem;color:var(--text-muted);margin-bottom:6px;" data-i18n="no_license_prompt"></p>
+<a class="btn btn-warning" id="buy-link" href="#" target="_blank" data-i18n="buy_btn"></a>
+<a class="btn btn-outline" id="renew-link" href="#" target="_blank" style="margin-top:6px;" data-i18n="renew_btn"></a>
 </div>
 <div id="renewal-state" class="hidden fade-in">
 <h1 id="title"></h1>
@@ -247,7 +193,7 @@ input::placeholder{color:var(--text-muted)}
 <div id="info-rows"></div>
 <hr>
 <div id="action-area"></div>
-<button class="btn-ghost" onclick="showForm()" id="activate-different-btn" data-i18n="activate_different">&#x1f510; ╪¬┘ü╪╣┘è┘ä ╪¿┘à┘ü╪¬╪º╪¡ ╪ó╪«╪▒</button>
+<button class="btn-ghost" onclick="showForm()" id="activate-different-btn" data-i18n="activate_different"></button>
 </div>
 </div>
 </div>
@@ -257,7 +203,8 @@ var _t={ar:{loading:"\u062c\u0627\u0631\u064a \u0627\u0644\u062a\u062d\u0645\u06
 en:{loading:"Loading...",activate_title:"\u{1f510} Activate License",activate_subtitle:"Enter your license key to activate the application",badge_inactive:"\u26a0 Inactive",license_key_label:"License Key",activate_btn:"\u2713 Activate",no_license_prompt:"Don't have a license?",buy_btn:"\u{1f6d2} Buy New License",renew_btn:"\u{1f504} Renew License",activate_different:"\u{1f510} Activate with different key",status_active:"\u{1f7e2} Active",status_grace:"\u26a0 Grace Period",status_suspended:"\u{1f6ab} Suspended",status_expired:"\u274c Expired",status_unknown:"\u26a0 Unknown",title_active:"\u{1f7e2} License Active",title_grace:"\u26a0 Grace Period",title_suspended:"\u{1f6ab} License Suspended",title_expired:"\u274c License Expired",title_unknown:"Unknown Status",row_key:"Key",row_subscription:"Subscription",row_days:"Days Remaining",row_expires:"Expires",row_overdue:"Overdue",day:"day",msg_active:"\u2713 Application is running normally",msg_grace:"\u26a0 Renew now to maintain access",msg_suspended:"\u{1f6ab} Please contact support",msg_expired:"\u274c License has expired",msg_unknown:"\u2753 Unknown status",renew:"\u{1f504} Renew Subscription",buy_new:"\u{1f6d2} Purchase New License",renew_license:"\u{1f504} Renew",buy:"\u{1f6d2} Purchase",conn_err:"\u274c Failed to connect to server",enter_key:"Please enter your license key",activated:"\u2713 Activated! Redirecting...",activate_fail:"Activation failed",conn_error:"Connection error"}};
 var _lang=localStorage.getItem('mouguard_lang')||'ar';
 function __(k){return(_t[_lang]&&_t[_lang][k])?(_t[_lang][k]):k}
-function apply_i18n(){var els=document.querySelectorAll('[data-i18n]');for(var i=0;i<els.length;i++){var k=els[i].getAttribute('data-i18n');if(k)els[i].textContent=__(k)}}
+function apply_i18n(){var els=document.querySelectorAll('[data-i18n]');for(var i=0;i<els.length;i++){var k=els[i].getAttribute('data-i18n');if(k)els[i].textContent=__(k)}var arBtn=document.getElementById('lang-ar-btn');if(arBtn)arBtn.textContent='\u0627\u0644\u0639\u0631\u0628\u064a\u0629'}
+apply_i18n();
 function switchLang(l){_lang=l;localStorage.setItem('mouguard_lang',l);var btns=document.querySelectorAll('.lang-btn');for(var i=0;i<btns.length;i++){btns[i].classList.toggle('active',btns[i].getAttribute('data-lang')===l)};document.documentElement.lang=l;apply_i18n();if(_d){if(_d.status==='no_license'){showNoLicense(_d)}else{showRenewal(_d)}}}
 window.onload=async function(){try{var r=await fetch('/api/license-status'),d=await r.json();_d=d;switchLang(_lang);if(d.status==='no_license'){showNoLicense(d)}else{showRenewal(d)}}catch(e){document.getElementById('loading-state').innerHTML='<span style=\"color:var(--error)\">'+__('conn_err')+'</span>'}}
 function showNoLicense(d){document.getElementById('loading-state').classList.add('hidden');var s=document.getElementById('no-license-state');s.classList.remove('hidden');var b=document.getElementById('buy-link'),r=document.getElementById('renew-link');if(d.purchase_url){b.href=d.purchase_url;b.style.display='block'}else{b.style.display='none'}if(d.renew_url){r.href=d.renew_url;r.style.display='block'}else{r.style.display='none'}}
@@ -2046,7 +1993,7 @@ app.get("/download", (req, res) => {
 });
 
 app.use(checkLicense);
-app.use(MouGuard.router());
+app.use('/api', MouGuard.router());
 
 // مسار التثبيت (بدون تحقق)
 app.get("/install", async (req, res) => {
