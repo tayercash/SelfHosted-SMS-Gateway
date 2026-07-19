@@ -910,8 +910,7 @@ MouGuard.router = getRouter;
 MouGuard.isActive = () => _instance && _instance.getResponse() && _instance.getResponse().valid === true;
 MouGuard.getLastError = () => _lastError;
 MouGuard.getInstance = () => _instance;
-const sqlite3 = require('sqlite3');
-const { open } = require('sqlite');
+const { open } = require('./sqlite3-compat');
 const pdu = require('node-pdu');
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
@@ -1029,7 +1028,7 @@ const smsProcessingBuffer = {};
 (async () => {
     const dbPath = getDatabasePath();
     // فتح القاعدة باستخدام المحرك الحديث الذي يدعم await مباشرة
-    db = await open({ filename: dbPath, driver: sqlite3.Database });
+    db = await open({ filename: dbPath });
 
     // 1. إنشاء جدول الإعدادات (المهم للتفعيل)
     await db.exec(`
