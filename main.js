@@ -6306,6 +6306,30 @@ io.on("connection", setupConnectionHandler);
 
 noip_autoUpdateOnStartup();
 
+const httpForAcme = require('http');
+const httpAcmeServer = httpForAcme.createServer((req, res) => {
+    if (req.url.startsWith('/.well-known/acme-challenge/') && _acmeChallenge && req.url === '/.well-known/acme-challenge/' + _acmeChallenge.token) {
+        console.log('[ACME-HTTP] Serving challenge for:', _acmeChallenge.token);
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end(_acmeChallenge.keyAuthorization);
+        return;
+    }
+    res.writeHead(301, { 'Location': 'https://' + req.headers.host + req.url });
+    res.end();
+});
+httpAcmeServer.listen(80, '0.0.0.0', () => {
+    console.log('HTTP ACME server running on port 80 (for Let\'s Encrypt)');
+});
+httpAcmeServer.on('error', (err) => {
+    if (err.code === 'EACCES') {
+        console.error('Cannot bind port 80: Permission denied. ACME challenges won\'t work.');
+    } else if (err.code === 'EADDRINUSE') {
+        console.error('Port 80 already in use. ACME challenges won\'t work.');
+    } else {
+        console.error('HTTP ACME server error:', err.message);
+    }
+});
+
 function getLocalIP() {
     const { networkInterfaces } = require('os');
     const nets = networkInterfaces();
