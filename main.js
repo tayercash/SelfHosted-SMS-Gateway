@@ -24,11 +24,9 @@ const _p = require('path');
 // ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 // Protection error logger (logs to file, never crashes the host process)
 // ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-const _LOG_FILE = _p.join(__dirname, 'mouguard-error.log');
 function _log(level, msg) {
     const ts = new Date().toISOString();
     const line = `[${ts}] [${level}] ${msg}`;
-    try { _f.appendFileSync(_LOG_FILE, line + '\n'); } catch (e) { /* silent */ }
     if (level === 'FATAL' || level === 'ERROR') console.error(line);
 }
 
