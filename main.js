@@ -6349,3 +6349,13 @@ httpsServer.listen(httpsPort, '0.0.0.0', (err) => {
     console.log(`HTTPS Server running on https://${localIP}:${httpsPort}`);
 });
 
+// HTTP server for local WebView access (avoids self-signed SSL issues on Android)
+const httpLocalServer = http.createServer(app);
+httpLocalServer.listen(29000, '0.0.0.0', () => {
+    const localIP = getLocalIP();
+    console.log(`HTTP Server running on http://${localIP}:29000 (for local WebView access)`);
+});
+httpLocalServer.on('error', (err) => {
+    console.error('Failed to start HTTP server on port 29000:', err.message);
+});
+
