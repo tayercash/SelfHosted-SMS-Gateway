@@ -83,7 +83,7 @@
     }
 
     .logo-section {
-      margin-bottom: 30px;
+      margin-bottom: 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -138,6 +138,60 @@
       display: inline-block;
       animation: wave 1.5s infinite;
       transform-origin: 70% 70%;
+    }
+
+    .lang-toggle {
+      position: relative;
+      z-index: 20;
+      display: flex;
+      flex-direction: row;
+      direction: ltr;
+      gap: 0;
+      background: rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 3px;
+      border: 1px solid rgba(255,255,255,0.08);
+      width: fit-content;
+      margin: 0 auto 10px;
+      overflow: hidden;
+    }
+
+    .lang-toggle button {
+      position: relative;
+      background: transparent;
+      border: none;
+      color: #999;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: color 0.3s;
+      font-family: inherit;
+      z-index: 1;
+    }
+
+    .lang-toggle .slider {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: calc(50% - 3px);
+      height: calc(100% - 6px);
+      background: linear-gradient(135deg, #ffcc00, #ff9900);
+      border-radius: 8px;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .lang-toggle.ar .slider {
+      transform: translateX(100%);
+    }
+
+    .lang-toggle.en .slider {
+      transform: translateX(0);
+    }
+
+    .lang-toggle button.active {
+      color: #0b0a02;
     }
 
     @keyframes wave {
@@ -282,6 +336,11 @@
   <div class="bg-glow-2"></div>
 
   <div class="login-container">
+    <div class="lang-toggle ar" id="lang-toggle" onclick="toggleLoginLang()">
+      <div class="slider"></div>
+      <button id="lang-en">EN</button>
+      <button id="lang-ar">العربية</button>
+    </div>
     <div class="logo-section">
       <div class="logo-img">
         <i class="fas fa-sms"></i>
@@ -318,6 +377,25 @@
 
   <script src="/assets/js/i18n.js"></script>
   <script src="assets/js/browserfingerprint.js"></script>
+
+  <script>
+    function switchLoginLang(lang) {
+      i18n.setLang(lang);
+      var tg = document.getElementById('lang-toggle');
+      tg.classList.toggle('ar', lang === 'ar');
+      tg.classList.toggle('en', lang === 'en');
+    }
+    function toggleLoginLang() {
+      var next = (localStorage.getItem('lang') || 'ar') === 'ar' ? 'en' : 'ar';
+      switchLoginLang(next);
+    }
+    (function () {
+      var cur = localStorage.getItem('lang') || 'ar';
+      var tg = document.getElementById('lang-toggle');
+      tg.classList.toggle('ar', cur === 'ar');
+      tg.classList.toggle('en', cur === 'en');
+    })();
+  </script>
 
   <script>
     document.getElementById('login-form').onsubmit = async (e) => {
