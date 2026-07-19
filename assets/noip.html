@@ -420,6 +420,40 @@
     </div>
 
     <div class="noip-card">
+        <h3><i class="fas fa-key"></i> <span data-i18n="noip.noip_account_heading">No-IP Account Setup</span></h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Hostname</label>
+                <input type="text" id="noip-hostname" placeholder="mygateway.ddns.net" dir="ltr">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label data-i18n="noip.username_label">Username (from No-IP account)</label>
+                <input type="text" id="noip-username" placeholder="user@email.com" dir="ltr">
+            </div>
+            <div class="form-group">
+                <label data-i18n="noip.password_label">Password</label>
+                <input type="password" id="noip-password" placeholder="••••••••" dir="ltr">
+            </div>
+        </div>
+        <div class="toggle-wrap">
+            <label class="toggle">
+                <input type="checkbox" id="noip-enabled">
+                <span class="slider"></span>
+            </label>
+            <span class="toggle-label" id="noip-enabled-label" data-i18n="noip.auto_ddns">Auto DDNS Update (Off)</span>
+        </div>
+        <div class="btn-group">
+            <button class="btn-save" onclick="noip_saveSettings()"><i class="fas fa-save"></i> <span
+                    data-i18n="noip.save_settings">Save Settings</span></button>
+            <button class="btn-save btn-blue" onclick="noip_updateNow()"><i class="fas fa-cloud-upload-alt"></i> <span
+                    data-i18n="noip.update_network">Update Network</span></button>
+        </div>
+        <div id="noip-update-result" class="update-result"></div>
+    </div>
+
+    <div class="noip-card">
         <h3><i class="fas fa-server"></i> <span data-i18n="noip.server_ip_heading">Server IP</span></h3>
         <div class="ip-box">
             <div>
@@ -458,41 +492,7 @@
         </div>
     </div>
 
-    <div class="noip-card">
-        <h3><i class="fas fa-key"></i> <span data-i18n="noip.noip_account_heading">No-IP Account Setup</span></h3>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Hostname</label>
-                <input type="text" id="noip-hostname" placeholder="mygateway.ddns.net" dir="ltr">
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label data-i18n="noip.username_label">Username (from No-IP account)</label>
-                <input type="text" id="noip-username" placeholder="user@email.com" dir="ltr">
-            </div>
-            <div class="form-group">
-                <label data-i18n="noip.password_label">Password</label>
-                <input type="password" id="noip-password" placeholder="••••••••" dir="ltr">
-            </div>
-        </div>
-        <div class="toggle-wrap">
-            <label class="toggle">
-                <input type="checkbox" id="noip-enabled">
-                <span class="slider"></span>
-            </label>
-            <span class="toggle-label" id="noip-enabled-label" data-i18n="noip.auto_ddns">Auto DDNS Update (Off)</span>
-        </div>
-        <div class="btn-group">
-            <button class="btn-save" onclick="noip_saveSettings()"><i class="fas fa-save"></i> <span
-                    data-i18n="noip.save_settings">Save Settings</span></button>
-            <button class="btn-save btn-blue" onclick="noip_updateNow()"><i class="fas fa-cloud-upload-alt"></i> <span
-                    data-i18n="noip.update_network">Update Network</span></button>
-        </div>
-        <div id="noip-update-result" class="update-result"></div>
-    </div>
-
-    <div class="noip-card">
+    <div class="noip-card" id="ssl-cert-card" style="display:none;">
         <h3><i class="fas fa-lock"></i> <span data-i18n="noip.ssl_heading">SSL Certificate (Let's Encrypt)</span></h3>
         <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:16px;" data-i18n="noip.ssl_info">Free SSL
             certificate for HTTPS</p>
@@ -587,6 +587,12 @@
             } else {
                 document.getElementById('noip-password').placeholder = '••••••••';
             }
+            var sslCard = document.getElementById('ssl-cert-card');
+            if (settings.hostname) {
+                sslCard.style.display = '';
+            } else {
+                sslCard.style.display = 'none';
+            }
         });
     }
 
@@ -615,6 +621,12 @@
                     ? t('noip.ddns_auto_on')
                     : t('noip.ddns_auto_off');
                 document.getElementById('noip-password').value = '';
+                var sslCard = document.getElementById('ssl-cert-card');
+                if (hostname) {
+                    sslCard.style.display = '';
+                } else {
+                    sslCard.style.display = 'none';
+                }
             },
             error: function () {
                 noip_showToast(t('noip.toast_settings_error'), true);
