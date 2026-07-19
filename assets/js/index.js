@@ -368,6 +368,14 @@ function setupSocketEvents(socket) {
         }
     });
 
+    // تحديث modem_phoneNumber فوراً عند تغيير port-selector
+    $(document).on('change', '#port-selector', function () {
+        const selectedModem = localModemList.find(m => m.path === this.value);
+        if (selectedModem) {
+            updatePhoneNumScreenDirect(selectedModem);
+        }
+    });
+
 }
 
 
