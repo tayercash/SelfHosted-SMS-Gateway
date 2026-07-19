@@ -246,7 +246,18 @@ function setupSocketEvents(socket) {
         }
     });
 
-    // --- دالة تحديث الـ port-selector من localModemList ---
+    function updatePhoneNumScreenDirect(modem) {
+        if (!modem) return;
+        const phoneDisplay = document.getElementById("modem_phoneNumber");
+        if (phoneDisplay) {
+            phoneDisplay.innerText = modem.number;
+            phoneDisplay.style.cursor = "pointer";
+        }
+        if (typeof updateDisplay === "function") {
+            updateDisplay(modem);
+        }
+    }
+
     function refreshPortSelectorUI() {
         const selector = document.getElementById("port-selector");
         if (!selector) return;
@@ -272,14 +283,16 @@ function setupSocketEvents(socket) {
             selector.innerHTML = newHtml;
         }
 
+        let selectedModem;
         if (!selector.value && localModemList.length > 0) {
             selector.value = localModemList[0].path;
-            if (typeof updateDisplay === "function") updateDisplay(localModemList[0]);
+            selectedModem = localModemList[0];
         } else {
-            const selectedModem = localModemList.find(m => m.path === selector.value);
-            if (selectedModem && typeof updateDisplay === "function") {
-                updateDisplay(selectedModem);
-            }
+            selectedModem = localModemList.find(m => m.path === selector.value);
+        }
+
+        if (selectedModem) {
+            updatePhoneNumScreenDirect(selectedModem);
         }
 
         if (typeof updateActionButtons === "function") updateActionButtons();
