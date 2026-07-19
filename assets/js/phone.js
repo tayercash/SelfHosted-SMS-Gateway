@@ -362,6 +362,6 @@ function startTimeoutCountdown(expiryTime) {
     }
     const seconds = Math.floor((timeLeft / 1000) % 60);
     const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
-    el.innerText = `ΓÅ│${minutes}:${seconds.toString().padStart(2, '0')}`;
+    el.innerText = `\u23F1${minutes}:${seconds.toString().padStart(2, '0')}`;
   }, 1000);
 }
