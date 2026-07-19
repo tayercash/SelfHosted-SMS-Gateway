@@ -326,17 +326,17 @@
     <div class="header" style="margin-bottom:16px;">
         <div class="header-left" style="display:flex;align-items:center;gap:10px;">
             <h2 style="color:var(--primary-color);font-size:1.1rem;display:flex;align-items:center;gap:8px;margin:0;">
-                <i class="fas fa-microchip"></i> <span data-i18n="modems.title">╪º┘ä╪ú╪¼┘ç╪▓╪⌐ ╪º┘ä┘à╪¬╪╡┘ä╪⌐</span>
+                <i class="fas fa-microchip"></i> <span data-i18n="modems.title">الأجهزة المتصلة</span>
             </h2>
             <span class="at-count" id="modems_count" style="color:var(--text-dim);font-size:0.85rem;"></span>
         </div>
         <div class="header-tools" style="display:flex;gap:8px;align-items:center;">
             <button onclick="window.parent.document.getElementById('dl-apk-btn').click()"
-                data-i18n-title="modems.connection_setup" title="╪¿┘è╪º┘å╪º╪¬ ╪º┘ä╪º╪¬╪╡╪º┘ä"
+                data-i18n-title="modems.connection_setup" title="إعداد الاتصال"
                 style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.85rem;transition:all 0.3s;">
                 <i class="fas fa-plug"></i>
             </button>
-            <button onclick="loadModems()" data-i18n-title="modems.refresh" title="╪¬╪¡╪»┘è╪½"
+            <button onclick="loadModems()" data-i18n-title="modems.refresh" title="تحديث"
                 style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.85rem;transition:all 0.3s;">
                 <i class="fas fa-sync-alt"></i>
             </button>
@@ -344,8 +344,7 @@
     </div>
 
     <div id="modems_list">
-        <div class="modems-empty"><i class="fas fa-spinner fa-spin"></i> <span data-i18n="modems.loading">╪¼╪º╪▒┘è
-                ╪º┘ä╪¬╪¡┘à┘è┘ä...</span></div>
+        <div class="modems-empty"><i class="fas fa-spinner fa-spin"></i> <span data-i18n="modems.loading">جارٍ التحميل...</span></div>
     </div>
 </div>
 
@@ -411,21 +410,21 @@
             h += '<div class="modem-card-header-left">';
             h += '<span class="modem-device-icon ' + iconClass + '">' + iconHtml + '</span>';
             h += '<div class="modem-device-info">';
-            h += '<div class="modem-device-name">' + (info.deviceName || 'ΓÇö') + ' <span class="modem-sim-count">' + sims.length + ' SIM</span></div>';
+            h += '<div class="modem-device-name">' + (info.deviceName || '\u2014') + ' <span class="modem-sim-count">' + sims.length + ' SIM</span></div>';
             h += '<div class="modem-device-meta">';
             if (info.androidVersion) h += '<span>Android ' + info.androidVersion + '</span>';
-            if (info.deviceId && info.deviceId !== 'unknown') h += '<span class="device-id-text">' + info.deviceId.substring(0, 12) + 'ΓÇª</span>';
+            if (info.deviceId && info.deviceId !== 'unknown') h += '<span class="device-id-text">' + info.deviceId.substring(0, 12) + '\u2026</span>';
             h += '</div></div></div>';
             h += '<div class="modem-card-header-right">';
             if (isPhone) h += '<button class="vibrate-btn" onclick="vibratePhone(\'' + info.path + '\')" title="' + t('modems.action_ring') + '"><i class="fas fa-mobile-alt"></i></button>';
             h += '</div></div>';
 
             h += '<div class="modem-card-body">';
-            h += '<div class="modem-sims-label">' + t('modems.sims_label', '╪º┘ä╪«╪╖┘ê╪╖') + ' (' + sims.length + ')</div>';
+            h += '<div class="modem-sims-label">' + t('modems.sims_label', 'الخطوط') + ' (' + sims.length + ')</div>';
 
             sims.forEach(function (m) {
                 var num = m.number && m.number !== 'Searching...' ? m.number : t('modems.unknown');
-                var signalHtml = isPhone ? '<span style="color:#2ec76e;font-size:.8rem;">Γ£ô</span>' : getSignalBars(m.signal || 0);
+                var signalHtml = isPhone ? '<span style="color:#2ec76e;font-size:.8rem;">\ud83d\udcf6</span>' : getSignalBars(m.signal || 0);
                 var simSlotLabel = m.simSlot !== undefined ? 'SIM ' + (parseInt(m.simSlot) + 1) : '-';
                 var ownerLabel = m.currentOwner ? m.currentOwner : (m.lastRequester ? m.lastRequester + ' ' + t('modems.owner_previous') : '-');
                 var statusBadge = getStatusBadge(m);
