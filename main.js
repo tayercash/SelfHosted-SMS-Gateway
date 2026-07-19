@@ -6272,7 +6272,7 @@ try {
     } else {
         httpsOptions = {
             key: fs.readFileSync(path.join(certsDir, 'server.key')),
-            cert: fs.readFileSync(certsDir, 'server.crt')
+            cert: fs.readFileSync(path.join(certsDir, 'server.crt'))
         };
     }
 } catch (e) {

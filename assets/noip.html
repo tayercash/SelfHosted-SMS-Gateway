@@ -94,6 +94,7 @@
         background: linear-gradient(135deg, #ffcc00, #ff9900);
         color: #0b0a02;
         white-space: nowrap;
+        align-items: center;
     }
 
     .btn-save:hover {
@@ -406,12 +407,15 @@
 
     <div class="instructions-box">
         <h4><i class="fas fa-info-circle"></i> <span data-i18n="noip.how_it_works">How it works</span></h4>
-        <p data-i18n-html="noip.how_it_works_desc">No-IP service binds a fixed hostname to a dynamic public IP address. This allows server access via a fixed link like <code>mygateway.ddns.net</code> even if the IP changes.</p>
+        <p data-i18n-html="noip.how_it_works_desc">No-IP service binds a fixed hostname to a dynamic public IP address.
+            This allows server access via a fixed link like <code>mygateway.ddns.net</code> even if the IP changes.</p>
         <ul>
-            <li data-i18n-html="noip.hw_step1">Create a free account on <a href="https://www.noip.com" target="_blank" style="color:#ffcc00;">noip.com</a></li>
+            <li data-i18n-html="noip.hw_step1">Create a free account on <a href="https://www.noip.com" target="_blank"
+                    style="color:#ffcc00;">noip.com</a></li>
             <li data-i18n-html="noip.hw_step2">Create a <strong>Hostname</strong> from the No-IP control panel</li>
             <li data-i18n-html="noip.hw_step3">Enter your account details here and press <strong>Save</strong></li>
-            <li data-i18n-html="noip.hw_step4">Press <strong>Update Now</strong> to sync DNS with the server's current IP</li>
+            <li data-i18n-html="noip.hw_step4">Press <strong>Update Now</strong> to sync DNS with the server's current
+                IP</li>
         </ul>
     </div>
 
@@ -432,7 +436,8 @@
     </div>
 
     <div class="diag-card">
-        <h3><i class="fas fa-stethoscope"></i> <span data-i18n="noip.diagnostics_heading">Connection Diagnostics</span></h3>
+        <h3><i class="fas fa-stethoscope"></i> <span data-i18n="noip.diagnostics_heading">Connection Diagnostics</span>
+        </h3>
         <div class="diag-row">
             <span class="diag-label" data-i18n="noip.server_ip">Server IP (current):</span>
             <span class="diag-value pending" id="diag-public-ip">---</span>
@@ -479,15 +484,18 @@
             <span class="toggle-label" id="noip-enabled-label" data-i18n="noip.auto_ddns">Auto DDNS Update (Off)</span>
         </div>
         <div class="btn-group">
-            <button class="btn-save" onclick="noip_saveSettings()"><i class="fas fa-save"></i> <span data-i18n="noip.save_settings">Save Settings</span></button>
-            <button class="btn-save btn-blue" onclick="noip_updateNow()"><i class="fas fa-cloud-upload-alt"></i> <span data-i18n="noip.update_network">Update Network</span></button>
+            <button class="btn-save" onclick="noip_saveSettings()"><i class="fas fa-save"></i> <span
+                    data-i18n="noip.save_settings">Save Settings</span></button>
+            <button class="btn-save btn-blue" onclick="noip_updateNow()"><i class="fas fa-cloud-upload-alt"></i> <span
+                    data-i18n="noip.update_network">Update Network</span></button>
         </div>
         <div id="noip-update-result" class="update-result"></div>
     </div>
 
     <div class="noip-card">
         <h3><i class="fas fa-lock"></i> <span data-i18n="noip.ssl_heading">SSL Certificate (Let's Encrypt)</span></h3>
-        <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:16px;" data-i18n="noip.ssl_info">Free SSL certificate for HTTPS</p>
+        <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:16px;" data-i18n="noip.ssl_info">Free SSL
+            certificate for HTTPS</p>
 
         <div class="instructions-box" style="margin-bottom:16px;">
             <h4><i class="fas fa-info-circle"></i> <span data-i18n="noip.ssl_requirements">Requirements</span></h4>
@@ -501,7 +509,8 @@
         <div class="ip-box" style="margin-bottom:12px;">
             <div>
                 <div class="ip-label" data-i18n="noip.cert_status">Certificate Status:</div>
-                <div class="ip-value" id="ssl-cert-status" style="font-size:0.95rem;" data-i18n="noip.loading">Loading...</div>
+                <div class="ip-value" id="ssl-cert-status" style="font-size:0.95rem;" data-i18n="noip.loading">
+                    Loading...</div>
             </div>
             <span class="status-badge pending" id="ssl-cert-badge">
                 <i class="fas fa-sync-alt fa-spin"></i> <span data-i18n="noip.loading">Loading...</span>
@@ -519,7 +528,9 @@
         <div class="btn-group">
             <button class="btn-save" onclick="ssl_createAccount()" id="ssl-account-btn"
                 style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;">
-                <i class="fas fa-user-plus"></i> <span data-i18n="noip.create_account">Create Let's Encrypt Account</span>
+                <i class="fas fa-user-plus" style="margin-inline-end: 0.5rem;"></i> <span
+                    data-i18n="noip.create_account">Create Let's Encrypt
+                    Account</span>
             </button>
             <button class="btn-save btn-blue" onclick="ssl_requestCert()" id="ssl-request-btn">
                 <i class="fas fa-certificate"></i> <span data-i18n="noip.request_cert">Request Certificate</span>
