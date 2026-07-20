@@ -53,19 +53,13 @@ h1{font-size:1.3rem;font-weight:800;margin-bottom:4px}
 <script src="/assets/js/qrcode.min.js"></script>
 <script>
 (function(){
-fetch('/local-ip').then(function(r){return r.json()}).then(function(d){
-  var url='https://'+d.ip+':'+d.port+'/assets/apk/SMS-Gateway-1.0.apk';
-  document.getElementById('dl-url').textContent=url;
-  document.getElementById('dl-btn').href=url;
-  var el=document.getElementById('qr-box');
-  try{new QRCode(el,{text:url,width:180,height:180,colorDark:'#1a1a24',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}
-}).catch(function(){
-  var url=location.origin+'/assets/apk/SMS-Gateway-1.0.apk';
-  document.getElementById('dl-url').textContent=url;
-  document.getElementById('dl-btn').href=url;
-  var el=document.getElementById('qr-box');
-  try{new QRCode(el,{text:url,width:180,height:180,colorDark:'#1a1a24',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}
-});
+var host = location.hostname;
+var port = 29001;
+var url='https://'+host+':'+port+'/assets/apk/SMS-Gateway-1.0.apk';
+document.getElementById('dl-url').textContent=url;
+document.getElementById('dl-btn').href=url;
+var el=document.getElementById('qr-box');
+try{new QRCode(el,{text:url,width:180,height:180,colorDark:'#1a1a24',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}
 })();
 </script>
 </body>

@@ -270,17 +270,12 @@
       var el=document.getElementById('dl-apk-qr');
       if(!el)return;
       el.innerHTML='';
-      fetch('/local-ip').then(function(r){return r.json()}).then(function(d){
-        var url='https://'+d.ip+':'+d.port+'/download';
-        document.getElementById('dl-apk-url').textContent=url;
-        document.getElementById('dl-apk-link').href=url;
-        try{new QRCode(el,{text:url,width:160,height:160,colorDark:'#1a1a24',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}
-      }).catch(function(){
-        var url=location.origin+'/download';
-        document.getElementById('dl-apk-url').textContent=url;
-        document.getElementById('dl-apk-link').href=url;
-        try{new QRCode(el,{text:url,width:160,height:160,colorDark:'#1a1a24',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}
-      });
+      var host = location.hostname;
+      var port = 29001;
+      var url='https://'+host+':'+port+'/download';
+      document.getElementById('dl-apk-url').textContent=url;
+      document.getElementById('dl-apk-link').href=url;
+      try{new QRCode(el,{text:url,width:160,height:160,colorDark:'#1a1a24',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}
     }
     $(document).on('click','#dl-apk-btn',function(){
       _dlLoadConnInfo();
