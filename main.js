@@ -1443,6 +1443,33 @@ const smsProcessingBuffer = {};
         }
     }
 
+    // 23. استيراد القواعد الافتراضية إذا كان الجدول فارغ
+    try {
+        const rulesCount = await db.get("SELECT COUNT(*) as count FROM analysis_rules");
+        if (rulesCount && rulesCount.count === 0) {
+            const smsrPath = path.join(__dirname, 'assets', 'default-sms-rules.smsr');
+            if (fs.existsSync(smsrPath)) {
+                const raw = fs.readFileSync(smsrPath, 'utf8');
+                const decoded = Buffer.from(raw.split('').reverse().join(''), 'base64').toString('utf8');
+                const rules = JSON.parse(decoded);
+                if (Array.isArray(rules) && rules.length > 0) {
+                    let imported = 0;
+                    for (const rule of rules) {
+                        if (!rule.name || !rule.regex_pattern) continue;
+                        await db.run(
+                            `INSERT INTO analysis_rules (name, description, provider, type, header_pattern, regex_pattern, field_mappings, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                            [rule.name, rule.description || '', rule.provider || '', rule.type || 'incoming', rule.header_pattern || '', rule.regex_pattern, JSON.stringify(rule.field_mappings || []), rule.enabled !== undefined ? (rule.enabled ? 1 : 0) : 1]
+                        );
+                        imported++;
+                    }
+                    console.log(`[OK] Imported ${imported} default analysis rules from smsr`);
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[X] Failed to import default analysis rules:', e.message);
+    }
+
     console.log("Database & Settings Table Ready");
     MouGuard.init();
     MouGuard.verify().then(ok => {
