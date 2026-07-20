@@ -80,7 +80,7 @@ function filterByLine(line) {
     renderLineTabs();
 }
 
-$('#sidebar-view').on('change', '#line-filter-select', function () {
+$(document).on('change', '#line-filter-select', function () {
     filterByLine($(this).val());
 });
 
