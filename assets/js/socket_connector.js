@@ -1,4 +1,5 @@
 var socket;
+var _eventsSetup = false;
 
 function connectToServer() {
     socket = io("", {
@@ -12,7 +13,10 @@ function connectToServer() {
 
     socket.on("connect", () => {
         console.log("Connected Successfully");
-        setupSocketEvents(socket);
+        if (!_eventsSetup) {
+            setupSocketEvents(socket);
+            _eventsSetup = true;
+        }
     });
 
     socket.on("connect_error", (err) => {

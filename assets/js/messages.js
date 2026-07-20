@@ -533,4 +533,11 @@ function isArabic(text) {
 // تشغيل التهيئة فور تحميل الملف
 initMessagesModule();
 
+// إعادة العرض عند عرض صفحة الرسائل (لأن initMessagesModule قد يُexecuted قبل وجود DOM)
+$(document).on('page_shown', function (e, url) {
+    if (url && url.includes('messages.html')) {
+        initMessagesModule();
+    }
+});
+
 

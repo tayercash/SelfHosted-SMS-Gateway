@@ -1674,15 +1674,24 @@ async function saveAndEmitUnique(msg) {
                 [msg.port, msg.receiver, msg.sender, msg.content, msg.timestamp, msg.fingerprint, msg.msgIndex, msg.simSlot || 0]
             );
 
+            let emitId = result.lastID;
+            if (result.changes === 0) {
+                const existing = await db.get("SELECT id FROM messages WHERE fingerprint = ?", [msg.fingerprint]);
+                if (existing) emitId = existing.id;
+            }
+
+            io.emit("modem-data", {
+                ...msg,
+                id: emitId,
+                msgIndex: msg.msgIndex,
+                type: "sms-list-item",
+                transactionType: msg.transactionType || null
+            });
+
             if (result.changes > 0) {
-                io.emit("modem-data", {
-                    ...msg,
-                    id: result.lastID,
-                    msgIndex: msg.msgIndex, // مهم جداً لعملية الحذف لاحقاً
-                    type: "sms-list-item",
-                    transactionType: msg.transactionType || null
-                });
                 console.log(`[OK] Saved Unique SMS: Index ${msg.msgIndex} from ${msg.sender}`);
+            } else {
+                console.log(`[OK] Emitting existing SMS: Index ${msg.msgIndex} from ${msg.sender} (id=${emitId})`);
             }
         }
     } catch (err) {

@@ -65,7 +65,14 @@ class Database {
             params = args;
         }
         this._db.run(sql, params);
+        const changes = this._db.getRowsModified();
+        let lastID = 0;
+        if (/^\s*INSERT\b/i.test(sql)) {
+            const r = this._db.exec("SELECT last_insert_rowid() as id");
+            if (r.length > 0 && r[0].values.length > 0) lastID = r[0].values[0][0];
+        }
         this._save();
+        return { changes, lastID };
     }
 
     get(sql, ...args) {
