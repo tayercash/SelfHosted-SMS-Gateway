@@ -935,9 +935,41 @@ const isDev = process.env.NODE_ENV !== 'production';
 function ensureCertificates(certsDir) {
     const keyPath = path.join(certsDir, 'server.key');
     const certPath = path.join(certsDir, 'server.crt');
-    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) return;
+
+    const os = require('os');
+    const localIPs = ['localhost', '127.0.0.1'];
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                localIPs.push(iface.address);
+            }
+        }
+    }
+
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+        try {
+            const forge = require('node-forge');
+            const certPem = fs.readFileSync(certPath, 'utf8');
+            const certObj = forge.pki.certificateFromPem(certPem);
+            const sanExt = certObj.extensions.find(e => e.name === 'subjectAltName');
+            if (sanExt) {
+                const existingIPs = sanExt.altNames
+                    .filter(n => n.type === 7)
+                    .map(n => n.value);
+                const missing = localIPs.filter(ip => !existingIPs.includes(ip));
+                if (missing.length === 0) return;
+                console.log('[Lock] IP changed, regenerating cert. Missing:', missing.join(', '));
+            }
+        } catch (e) {
+            console.log('[Lock] Cannot read existing cert, regenerating...');
+        }
+        try { fs.unlinkSync(keyPath); } catch(e) {}
+        try { fs.unlinkSync(certPath); } catch(e) {}
+    }
 
     console.log('[Lock] Generating self-signed SSL certificates...');
+    console.log('[Lock] SAN IPs:', localIPs.join(', '));
     const forge = require('node-forge');
     const pki = forge.pki;
     const keys = pki.rsa.generateKeyPair(2048);
@@ -950,10 +982,14 @@ function ensureCertificates(certsDir) {
     const attrs = [{ name: 'commonName', value: 'localhost' }, { name: 'organizationName', value: 'SMS Gateway' }];
     cert.setSubject(attrs);
     cert.setIssuer(attrs);
+    const altNames = localIPs.map(ip => {
+        const isIP = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip);
+        return isIP ? { type: 7, ip: ip } : { type: 2, value: ip };
+    });
     cert.setExtensions([
         { name: 'basicConstraints', cA: true },
         { name: 'keyUsage', keyCertSign: true, digitalSignature: true, keyEncipherment: true },
-        { name: 'subjectAltName', altNames: [{ type: 2, value: 'localhost' }, { type: 7, ip: '127.0.0.1' }] }
+        { name: 'subjectAltName', altNames: altNames }
     ]);
     cert.sign(keys.privateKey, forge.md.sha256.create());
     if (!fs.existsSync(certsDir)) fs.mkdirSync(certsDir, { recursive: true });
@@ -3046,6 +3082,8 @@ function getSslStatus() {
     return {
         hasLetsEncrypt,
         hasAccountKey: !!(acmeAccountKey && acmeAccountUrl),
+        port80Ready,
+        acmePort,
         expiresAt,
         issuer,
         domains,
@@ -3089,6 +3127,17 @@ app.post("/api/ssl/create-account", authenticateToken, isAdmin, async (req, res)
 let sslTask = { status: 'idle', message: '', result: null };
 
 async function runSslTask(domain) {
+    if (!port80Ready) {
+        const msg = 'ACME server is not running. Please wait for the server to start and try again.';
+        console.error('[SSL]', msg);
+        sslTask = { status: 'error', message: msg, result: null };
+        return;
+    }
+
+    if (acmePort !== 80) {
+        console.log('[SSL] Using port ' + acmePort + ' for ACME. Router must forward external:80 → device:' + acmePort);
+    }
+
     _sslPauseGuard = true;
     console.log('[SSL] Heartbeat paused');
     sslTask = { status: 'running', message: 'Starting...', result: null };
@@ -6306,6 +6355,8 @@ io.on("connection", setupConnectionHandler);
 noip_autoUpdateOnStartup();
 
 const httpForAcme = require('http');
+let port80Ready = false;
+let acmePort = 80;
 const httpAcmeServer = httpForAcme.createServer((req, res) => {
     if (req.url.startsWith('/.well-known/acme-challenge/') && _acmeChallenge && req.url === '/.well-known/acme-challenge/' + _acmeChallenge.token) {
         console.log('[ACME-HTTP] Serving challenge for:', _acmeChallenge.token);
@@ -6316,16 +6367,26 @@ const httpAcmeServer = httpForAcme.createServer((req, res) => {
     res.writeHead(301, { 'Location': 'https://' + req.headers.host + req.url });
     res.end();
 });
-httpAcmeServer.listen(80, '0.0.0.0', () => {
-    console.log('HTTP ACME server running on port 80 (for Let\'s Encrypt)');
-});
 httpAcmeServer.on('error', (err) => {
-    if (err.code === 'EACCES') {
-        console.error('Cannot bind port 80: Permission denied. ACME challenges won\'t work.');
+    if (err.code === 'EACCES' && acmePort === 80) {
+        console.log('[SSL] Port 80 blocked (Android). Falling back to port 8080...');
+        acmePort = 8080;
+        httpAcmeServer.listen(8080, '0.0.0.0');
     } else if (err.code === 'EADDRINUSE') {
-        console.error('Port 80 already in use. ACME challenges won\'t work.');
+        console.error('[SSL] Port ' + acmePort + ' already in use.');
     } else {
-        console.error('HTTP ACME server error:', err.message);
+        console.error('[SSL] ACME server error:', err.message);
+    }
+});
+httpAcmeServer.listen(80, '0.0.0.0', () => {
+    port80Ready = true;
+    console.log('[SSL] ACME HTTP server running on port 80');
+});
+httpAcmeServer.on('listening', () => {
+    port80Ready = true;
+    console.log('[SSL] ACME HTTP server ready on port ' + acmePort);
+    if (acmePort !== 80) {
+        console.log('[SSL] Router must forward external port 80 → device port 8080');
     }
 });
 
@@ -6338,6 +6399,20 @@ function getLocalIP() {
         }
     }
     return '127.0.0.1';
+}
+
+function detectPublicIP() {
+    return new Promise((resolve, reject) => {
+        const https = require('https');
+        https.get('https://api.ipify.org?format=json', { timeout: 5000 }, (res) => {
+            let data = '';
+            res.on('data', (c) => data += c);
+            res.on('end', () => {
+                try { resolve(JSON.parse(data).ip); }
+                catch (e) { reject(e); }
+            });
+        }).on('error', reject);
+    });
 }
 
 httpsServer.listen(httpsPort, '0.0.0.0', (err) => {
