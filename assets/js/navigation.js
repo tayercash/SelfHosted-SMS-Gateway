@@ -124,6 +124,8 @@ if (!window.navigationJsInitialized) {
         const old_navigation_link = $(".sidebar-menu .menu-item").eq(now_navigation_link_index).attr("data-full_iframe_target_url");
         const new_navigation_link = $this.attr("data-full_iframe_target_url");
 
+        window.closeSidebar && window.closeSidebar();
+
         // حفظ الصفحة المستهدفة في sessionStorage
         if (new_navigation_link) {
             sessionStorage.setItem('active_nav_url', new_navigation_link);

@@ -296,7 +296,6 @@
     height: 100%;
     z-index: 100000000;
     pointer-events: none;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-drawer.open {
@@ -310,10 +309,8 @@
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     opacity: 0;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.35s ease;
 }
 
 .sidebar-drawer.open .sidebar-backdrop {
@@ -323,23 +320,36 @@
 .sidebar-content {
     position: absolute;
     top: 0;
-    left: -300px;
-    right: auto;
+    right: 0;
+    left: auto;
     width: 280px;
     height: 100%;
     background: var(--sidebar-bg) !important;
-    border-inline-end: 1px solid rgba(255, 204, 0, 0.15);
-    border-inline-start: none;
-    box-shadow: none;
+    border-left: 1px solid rgba(255, 204, 0, 0.15);
+    border-right: none;
     display: flex;
     flex-direction: column;
-    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s ease;
+    -webkit-transform: translateX(100%);
+    transform: translateX(100%);
+    will-change: transform;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-drawer.open .sidebar-content {
+    -webkit-transform: translateX(0);
+    transform: translateX(0);
+}
+
+/* overlay يمنع الضغط يعدي تحت السايدبار */
+#sidebar-overlay {
+    position: fixed;
+    top: 0;
+    right: 280px;
     left: 0;
-    right: auto;
-    box-shadow: var(--shadow-sidebar);
+    height: 100%;
+    z-index: 100000001;
+    background: transparent;
+    touch-action: manipulation;
 }
 
 .sidebar-header {
@@ -501,8 +511,8 @@
     .sidebar-drawer {
         position: fixed;
         top: 0;
-        left: 0;
-        right: auto;
+        left: auto;
+        right: 0;
         width: 280px !important;
         height: 100%;
         pointer-events: auto !important;
@@ -514,11 +524,14 @@
     }
 
     .sidebar-content {
-        left: 0 !important;
-        right: auto !important;
-        border-inline-end: 1px solid rgba(255, 204, 0, 0.1);
-        border-inline-start: none !important;
-        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5) !important;
+        right: 0 !important;
+        left: auto !important;
+        border-left: 1px solid rgba(255, 204, 0, 0.1);
+        border-right: none !important;
+        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5) !important;
+        -webkit-transform: translateX(0) !important;
+        transform: translateX(0) !important;
+        will-change: auto;
     }
 
     .sidebar-header #sidebar-close-btn,
@@ -527,17 +540,16 @@
     }
 
     .app-header {
-        left: 280px !important;
-        right: auto;
+        left: auto;
+        right: 280px !important;
         width: calc(100% - 280px) !important;
         padding: 12px 40px !important;
     }
 
     .full_view {
-        left: 280px !important;
-        right: auto;
+        left: auto;
+        right: 280px !important;
         width: calc(100% - 280px) !important;
-        bottom: 0;
     }
 
     .navigation_container {
@@ -631,18 +643,54 @@ input[type="date"] {
 
 /* ===== RTL / LTR Support ===== */
 
-/* RTL Sidebar Mirror */
-html[dir="rtl"] .sidebar-drawer { right: 0; left: auto; }
-html[dir="rtl"] .sidebar-content { right: -300px; left: auto; }
-html[dir="rtl"] .sidebar-drawer.open .sidebar-content { right: 0; left: auto; }
-html[dir="rtl"] .sidebar-content { border-right: none; border-left: 1px solid rgba(255,255,255,0.1); }
+/* LTR: sidebar slides from the left */
+html[dir="ltr"] .sidebar-content {
+    right: auto !important;
+    left: 0 !important;
+    border-left: none !important;
+    border-right: 1px solid rgba(255, 204, 0, 0.15) !important;
+    -webkit-transform: translateX(-100%);
+    transform: translateX(-100%);
+}
 
-/* Desktop sidebar RTL */
+html[dir="ltr"] .sidebar-drawer.open .sidebar-content {
+    -webkit-transform: translateX(0);
+    transform: translateX(0);
+}
+
+/* LTR desktop sidebar on the left */
 @media (min-width: 992px) {
-    html[dir="rtl"] .sidebar-drawer { right: 0; left: auto; }
-    html[dir="rtl"] .sidebar-content { right: 0 !important; left: auto !important; border-right: none; border-left: 1px solid rgba(255,255,255,0.1); }
-    html[dir="rtl"] .app-header { right: 280px !important; left: 0 !important; }
-    html[dir="rtl"] .full_view { right: 280px !important; left: 0 !important; }
+    html[dir="ltr"] .sidebar-drawer {
+        left: 0 !important;
+        right: auto !important;
+    }
+
+    html[dir="ltr"] .sidebar-content {
+        left: 0 !important;
+        right: auto !important;
+        border-right: 1px solid rgba(255, 204, 0, 0.1) !important;
+        border-left: none !important;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5) !important;
+        -webkit-transform: translateX(0) !important;
+        transform: translateX(0) !important;
+        will-change: auto;
+    }
+
+    html[dir="ltr"] .app-header {
+        right: auto !important;
+        left: 280px !important;
+    }
+
+    html[dir="ltr"] .full_view {
+        right: auto !important;
+        left: 280px !important;
+    }
+}
+
+/* LTR overlay على الشمال عشان السايدبار على اليسار */
+html[dir="ltr"] #sidebar-overlay {
+    right: 0 !important;
+    left: 280px !important;
 }
 
 /* Navigation container RTL */
@@ -650,5 +698,4 @@ html[dir="rtl"] .navigation_container { right: 0; left: auto; }
 
 /* Header direction for RTL */
 html[dir="rtl"] .app-header { direction: rtl; }
-/* html[dir="rtl"] .header-left { flex-direction: row-reverse; } */
-html[dir="rtl"] .header-right { flex-direction: row-reverse; direction: ltr;}
+html[dir="rtl"] .header-right { flex-direction: row-reverse; direction: ltr; }
