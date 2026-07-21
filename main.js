@@ -4527,6 +4527,24 @@ function setupConnectionHandler(socket) {
             // معالجة المدفوعات والتحويلات باستخدام القواعد الديناميكية
             const txDetails = await processMessageWithRules(simNumber, sender, content, now);
 
+            // إرسال تفاصيل المعاملة لكل الأجهزة المتصلة
+            if (txType3 || txDetails) {
+                try {
+                    const alertPayload = {
+                        transactionType: txType3?.type || txDetails?.type || null,
+                        sender: sender,
+                        receiver: simNumber,
+                        provider: txDetails?.provider || null,
+                        amount: txDetails?.amount || null,
+                        sender_name: txDetails?.sender_name || null,
+                        receiver_number: txDetails?.receiver_number || null,
+                        transfer_fee: txDetails?.transfer_fee || null,
+                        balance_after: txDetails?.balance_after || null
+                    };
+                    if (io) io.emit("transaction-alert", alertPayload);
+                } catch (e) {}
+            }
+
             // إرسال تأكيد الاستلام للهاتف مع تفاصيل المعاملة
             if (msgId != null) {
                 try {
