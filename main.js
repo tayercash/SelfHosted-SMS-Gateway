@@ -4525,11 +4525,24 @@ function setupConnectionHandler(socket) {
             });
 
             // معالجة المدفوعات والتحويلات باستخدام القواعد الديناميكية
-            await processMessageWithRules(simNumber, sender, content, now);
+            const txDetails = await processMessageWithRules(simNumber, sender, content, now);
 
-            // إرسال تأكيد الاستلام للهاتف
+            // إرسال تأكيد الاستلام للهاتف مع تفاصيل المعاملة
             if (msgId != null) {
-                try { socket.emit("phone-sms-ack", { msgId: Number(msgId) }); } catch (e) {}
+                try {
+                    const ackPayload = {
+                        msgId: Number(msgId),
+                        transactionType: txType3?.type || null,
+                        sender: sender,
+                        provider: txDetails?.provider || null,
+                        amount: txDetails?.amount || null,
+                        sender_name: txDetails?.sender_name || null,
+                        receiver_number: txDetails?.receiver_number || null,
+                        transfer_fee: txDetails?.transfer_fee || null,
+                        balance_after: txDetails?.balance_after || null
+                    };
+                    socket.emit("phone-sms-ack", ackPayload);
+                } catch (e) {}
             }
         });
 
@@ -5091,7 +5104,7 @@ async function autoExecuteWalletOperation(walletNum, provider, type, amount, fee
 async function processMessageWithRules(receiverNumber, senderNumber, messageText, receivedAt) {
     try {
         const rules = await db.all("SELECT * FROM analysis_rules WHERE enabled = 1");
-        if (!rules || rules.length === 0) return;
+        if (!rules || rules.length === 0) return null;
 
         // تحميل المزودين المفعّلين من جدول transfer_providers
         const activeProviders = await db.all("SELECT provider_key, enabled FROM transfer_providers");
@@ -5120,6 +5133,19 @@ async function processMessageWithRules(receiverNumber, senderNumber, messageText
                     extracted[f.name] = f.type === 'float' ? parseFloat(String(val).replace(/,/g, '')) : val;
                 }
             });
+
+            // نتائج المعاملة لإرسالها للهاتف
+            const txResult = {
+                provider: rule.provider,
+                type: rule.type,
+                amount: extracted.amount || null,
+                sender_name: extracted.sender_name || null,
+                sender_number: extracted.sender_number || null,
+                receiver_number: extracted.receiver_number || null,
+                transfer_fee: extracted.transfer_fee || null,
+                balance_after: extracted.balance_after || null,
+                message_text: messageText
+            };
 
             // التوجيه للجدول المناسب حسب المزود والنوع
             const fingerprint = crypto.createHash('md5')
@@ -5182,10 +5208,13 @@ async function processMessageWithRules(receiverNumber, senderNumber, messageText
                 );
                 console.log(`[Chart] Custom rule matched: ${rule.name}`, extracted);
             }
+
+            return txResult;
         }
     } catch (err) {
         console.error(`[X] Error in processMessageWithRules:`, err.message);
     }
+    return null;
 }
 
 // دالة مساعدة للإرسال التلقائي إلى Tayercash
