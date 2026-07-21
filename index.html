@@ -89,6 +89,24 @@
             </div>
           </div>
         </div>
+
+        <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:20px;margin-top:20px;">
+          <h3 style="margin:0 0 6px 0;color:var(--primary-color);font-size:1rem;display:flex;align-items:center;gap:8px;">
+            <i class="fas fa-bell"></i> <span>إعدادات الإشعارات</span>
+          </h3>
+          <p style="color:var(--text-dim);font-size:.8rem;margin:0 0 16px 0;">تحكم في وصول إشعارات المعاملات للأجهزة المتصلة</p>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <label style="position:relative;width:48px;height:26px;cursor:pointer;flex-shrink:0;">
+              <input type="checkbox" id="dl-apk-broadcast-toggle" style="display:none;" onchange="dlToggleBroadcast(this.checked)">
+              <span style="position:absolute;inset:0;background:#555;border-radius:26px;transition:0.3s;"></span>
+              <span style="position:absolute;width:20px;height:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.3s;"></span>
+            </label>
+            <div>
+              <span id="dl-apk-broadcast-label" style="font-size:.9rem;color:var(--text-main);font-weight:600;">إشعارات لكل الأجهزة</span>
+              <p id="dl-apk-broadcast-desc" style="font-size:.75rem;color:var(--text-dim);margin:2px 0 0 0;">كل جهاز متصل هيستقبل إشعار وصوت عند أي معاملة</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -248,6 +266,31 @@
       setTimeout(function() { btn.textContent = t('modems.copy_btn'); btn.classList.remove('copied'); }, 2000);
     });
   }
+  function dlToggleBroadcast(checked) {
+    fetch('/api/notification/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ broadcastEnabled: checked })
+    }).then(function(r){return r.json()}).then(function(data){
+      var label = document.getElementById('dl-apk-broadcast-label');
+      var desc = document.getElementById('dl-apk-broadcast-desc');
+      var toggle = document.getElementById('dl-apk-broadcast-toggle');
+      toggle.checked = checked;
+      var slider = toggle.parentElement.children[2];
+      var bg = toggle.parentElement.children[1];
+      if (checked) {
+        bg.style.background = '#2ec76e';
+        slider.style.transform = 'translateX(22px)';
+        label.textContent = 'إشعارات لكل الأجهزة';
+        desc.textContent = 'كل جهاز متصل هيستقبل إشعار وصوت عند أي معاملة';
+      } else {
+        bg.style.background = '#555';
+        slider.style.transform = 'translateX(0)';
+        label.textContent = 'إشعارات للجهاز المحلي بس';
+        desc.textContent = 'الإشعار والصوت هيوصل بس للجهاز اللي عليه الرقم المستلم';
+      }
+    }).catch(function(){});
+  }
   (function(){
     function _dlLoadConnInfo(){
       fetch('/api/server-info').then(function(r){return r.json()}).then(function(data){
@@ -279,6 +322,12 @@
     }
     $(document).on('click','#dl-apk-btn',function(){
       _dlLoadConnInfo();
+      fetch('/api/notification/settings').then(function(r){return r.json()}).then(function(data){
+        var toggle = document.getElementById('dl-apk-broadcast-toggle');
+        var enabled = data.broadcastEnabled !== false;
+        toggle.checked = enabled;
+        dlToggleBroadcast(enabled);
+      }).catch(function(){});
       if(typeof QRCode!=='undefined'){_dlRenderQR();}else{
         var s=document.createElement('script');
         s.src='/assets/js/qrcode.min.js';

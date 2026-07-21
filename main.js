@@ -2995,6 +2995,25 @@ app.post("/api/noip/update", authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
+app.get("/api/notification/settings", authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const row = await db.get("SELECT value FROM settings WHERE key = 'broadcast_notif_enabled'");
+        res.json({ broadcastEnabled: row ? row.value === '1' : true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post("/api/notification/settings", authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { broadcastEnabled } = req.body;
+        await db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ['broadcast_notif_enabled', broadcastEnabled ? '1' : '0']);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get("/api/noip/diagnose", authenticateToken, isAdmin, async (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.set('Pragma', 'no-cache');
@@ -4527,7 +4546,7 @@ function setupConnectionHandler(socket) {
             // معالجة المدفوعات والتحويلات باستخدام القواعد الديناميكية
             const txDetails = await processMessageWithRules(simNumber, sender, content, now);
 
-            // إرسال تفاصيل المعاملة لكل الأجهزة المتصلة
+            // إرسال تفاصيل المعاملة
             if (txType3 || txDetails) {
                 try {
                     const alertPayload = {
@@ -4541,7 +4560,13 @@ function setupConnectionHandler(socket) {
                         transfer_fee: txDetails?.transfer_fee || null,
                         balance_after: txDetails?.balance_after || null
                     };
-                    if (io) io.emit("transaction-alert", alertPayload);
+                    const broadcastRow = await db.get("SELECT value FROM settings WHERE key = 'broadcast_notif_enabled'");
+                    const broadcastEnabled = !broadcastRow || broadcastRow.value === '1';
+                    if (broadcastEnabled) {
+                        if (io) io.emit("transaction-alert", alertPayload);
+                    } else {
+                        socket.emit("transaction-alert", alertPayload);
+                    }
                 } catch (e) {}
             }
 
