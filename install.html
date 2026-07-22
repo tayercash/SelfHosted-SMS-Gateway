@@ -26,10 +26,10 @@
       justify-content: center;
       align-items: center;
       margin: 0;
-      padding: 0;
+      padding: 20px 0;
       width: 100%;
       min-height: 100vh;
-      overflow: hidden;
+      overflow: auto;
       position: relative;
     }
 
@@ -286,6 +286,10 @@
     ::after,
     ::before {
       box-sizing: border-box;
+    }
+
+    @media (max-height: 700px) {
+      body { align-items: flex-start; padding-top: 16px; }
     }
 
     .mask-password {
