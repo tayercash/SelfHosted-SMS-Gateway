@@ -1542,7 +1542,6 @@ const acmeChallengeMiddleware = (req, res, next) => {
 // --- دالة التحقق للاكترvation (Middleware) ---
 const checkLicense = async (req, res, next) => {
     if (_sslPauseGuard) return next();
-    if (req.path === '/login' || req.path === '/install' || req.path.startsWith('/api/setup/')) return next();
     if (req.path === '/api/license-status' || req.path === '/api/activate-app') return next();
     if (req.path === '/api/login') return next();
     if (MouGuard.isActive()) {
@@ -1551,6 +1550,20 @@ const checkLicense = async (req, res, next) => {
     const ok = await MouGuard.verify();
     if (ok) {
         return next();
+    }
+    // لو النظام لسه ما اتثبتش (مفيش users)، خلي install يشتغل عادي
+    if (req.path === '/install' || req.path.startsWith('/api/setup/')) {
+        try {
+            const row = await db.get("SELECT COUNT(*) as count FROM users");
+            if (row.count === 0) return next();
+        } catch (e) { return next(); }
+    }
+    // لو MouGuard غير مفعّل والsystem مثبت، امنع login
+    if (req.path === '/login') {
+        try {
+            const row = await db.get("SELECT COUNT(*) as count FROM users");
+            if (row.count === 0) return next();
+        } catch (e) { return next(); }
     }
     MouGuard.middleware(req, res, next);
 };
