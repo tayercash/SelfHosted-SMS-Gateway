@@ -116,7 +116,6 @@ function renderLicenseInfo(d) {
     html += licRow(t('license.created_at'), esc(d.created_at || '-'));
     html += licRow(t('license.expires_at'), d.expires_at ? '<span class="' + (d.days_remaining !== null && d.days_remaining < 7 ? 'warn' : '') + '">' + esc(d.expires_at) + '</span>' : '<span class="green">' + t('license.lifetime') + '</span>', true);
     if (d.grace_end_at) html += licRow(t('license.grace_end'), '<span class="warn">' + esc(d.grace_end_at) + '</span>', true);
-    html += licRow(t('license.last_verified'), esc(d.last_verified_at || '-'));
     html += '</div>';
 
     // Payments Card
