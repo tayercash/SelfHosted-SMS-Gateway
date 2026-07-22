@@ -364,15 +364,15 @@
             <span class="at-count" id="at-count" style="color:var(--text-dim);font-size:0.85rem;"></span>
         </div>
         <div class="header-tools" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <div class="at-filter-tabs" style="display:flex;gap:4px;margin:0;">
+            <div class="at-filter-tabs" style="display:flex;gap:4px;margin:0;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;">
                 <button class="active" data-filter="all" onclick="at_setFilter('all')"
-                    style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:rgba(255,204,0,0.08);color:var(--text-main);cursor:pointer;font-size:0.8rem;font-weight:600;transition:all 0.3s;"><span
+                    style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:rgba(255,204,0,0.08);color:var(--text-main);cursor:pointer;font-size:0.8rem;font-weight:600;transition:all 0.3s;white-space:nowrap;flex-shrink:0;"><span
                         data-i18n="transactions.filter_all">الكل</span></button>
                 <button data-filter="incoming" onclick="at_setFilter('incoming')"
-                    style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.8rem;font-weight:600;transition:all 0.3s;"><span
+                    style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.8rem;font-weight:600;transition:all 0.3s;white-space:nowrap;flex-shrink:0;"><span
                         style="color:#2ec76e;">🟢</span> وارد</button>
                 <button data-filter="outgoing" onclick="at_setFilter('outgoing')"
-                    style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.8rem;font-weight:600;transition:all 0.3s;"><span
+                    style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.8rem;font-weight:600;transition:all 0.3s;white-space:nowrap;flex-shrink:0;"><span
                         style="color:#ef4444;">🔴</span> خارج</button>
             </div>
 
