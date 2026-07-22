@@ -257,6 +257,13 @@
     }
 
     @media (max-width: 768px) {
+        .table-wrap {
+            max-height: max-content;
+            background: #00000000;
+            border: none;
+            border-radius: 0;
+        }
+
         .table-wrap table {
             border: none;
         }
@@ -405,39 +412,39 @@
         </div>
     </div>
 
-    <div style="padding: 0 20px;">
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr style="position: sticky;top: 0;z-index: 10;">
-                        <th data-i18n="transactions.col_provider">المزود</th>
-                        <th data-i18n="transactions.col_type">النوع</th>
-                        <th data-i18n="transactions.col_deposit">الإيداع</th>
-                        <th data-i18n="transactions.col_from">من</th>
-                        <th data-i18n="transactions.col_to">إلى</th>
-                        <th data-i18n="transactions.col_fees">رسوم</th>
-                        <th data-i18n="transactions.col_dates">التاريخ</th>
-                        <th data-i18n="transactions.col_action">إجراء</th>
-                        <th data-i18n="transactions.col_wallet_op">محفظة</th>
-                    </tr>
-                </thead>
-                <tbody id="at-list">
-                    <tr>
-                        <td colspan="9" class="empty-msg"><i class="fas fa-spinner fa-spin"></i> <span
-                                data-i18n="transactions.loading">جاري التحميل...</span></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="at-pagination" id="at-pagination" style="display:none;">
-            <button id="at-prev" onclick="at_changePage(-1)"><i class="fas fa-chevron-right"></i> <span
-                    data-i18n="transactions.prev">السابق</span></button>
-            <span class="page-info" id="at-page-info">الصفحة 1 من 1</span>
-            <button id="at-next" onclick="at_changePage(1)"><span data-i18n="transactions.next">التالي</span> <i
-                    class="fas fa-chevron-left"></i></button>
-        </div>
+    <!-- <div style="padding: 0 20px;"> -->
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr style="position: sticky;top: 0;z-index: 10;">
+                    <th data-i18n="transactions.col_provider">المزود</th>
+                    <th data-i18n="transactions.col_type">النوع</th>
+                    <th data-i18n="transactions.col_deposit">الإيداع</th>
+                    <th data-i18n="transactions.col_from">من</th>
+                    <th data-i18n="transactions.col_to">إلى</th>
+                    <th data-i18n="transactions.col_fees">رسوم</th>
+                    <th data-i18n="transactions.col_dates">التاريخ</th>
+                    <th data-i18n="transactions.col_action">إجراء</th>
+                    <th data-i18n="transactions.col_wallet_op">محفظة</th>
+                </tr>
+            </thead>
+            <tbody id="at-list">
+                <tr>
+                    <td colspan="9" class="empty-msg"><i class="fas fa-spinner fa-spin"></i> <span
+                            data-i18n="transactions.loading">جاري التحميل...</span></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
+
+    <div class="at-pagination" id="at-pagination" style="display:none;">
+        <button id="at-prev" onclick="at_changePage(-1)"><i class="fas fa-chevron-right"></i> <span
+                data-i18n="transactions.prev">السابق</span></button>
+        <span class="page-info" id="at-page-info">الصفحة 1 من 1</span>
+        <button id="at-next" onclick="at_changePage(1)"><span data-i18n="transactions.next">التالي</span> <i
+                class="fas fa-chevron-left"></i></button>
+    </div>
+    <!-- </div> -->
 </div>
 
 <script src="/assets/js/i18n.js"></script>
