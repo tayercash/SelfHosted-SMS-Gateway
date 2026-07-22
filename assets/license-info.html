@@ -1,0 +1,174 @@
+<style>
+    .lic-loading { display: flex; align-items: center; justify-content: center; padding: 60px 20px; color: var(--text-secondary); gap: 10px; }
+    .lic-loading .spinner { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.08); border-top-color: #ffcc00; border-radius: 50%; animation: licSpin .7s linear infinite; }
+    @keyframes licSpin { to { transform: rotate(360deg); } }
+    .lic-error { text-align: center; padding: 40px 20px; color: #ef4444; }
+    .lic-refresh-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; background: rgba(255,204,0,0.1); color: #ffcc00; border: 1.5px solid rgba(255,204,0,0.2); border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.85rem; font-family: inherit; transition: all 0.3s; margin-top: 12px; }
+    .lic-refresh-btn:hover { background: #ffcc00; color: #000; transform: translateY(-2px); }
+    .lic-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    .lic-header h2 { margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+    .lic-status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 20px; font-size: .78rem; font-weight: 700; }
+    .lic-status-badge.active { background: rgba(16,185,129,.12); color: #10b981; border: 1px solid rgba(16,185,129,.25); }
+    .lic-status-badge.grace { background: rgba(255,159,67,.12); color: #ff9f43; border: 1px solid rgba(255,159,67,.25); }
+    .lic-status-badge.expired { background: rgba(239,68,68,.12); color: #ef4444; border: 1px solid rgba(239,68,68,.25); }
+    .lic-status-badge.suspended { background: rgba(239,68,68,.12); color: #ef4444; border: 1px solid rgba(239,68,68,.25); }
+    .lic-status-badge.no_license { background: rgba(136,136,136,.08); color: #888; border: 1px solid rgba(136,136,136,.15); }
+    .lic-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .lic-card { background: rgba(30,30,30,0.4); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; }
+    .lic-card-title { font-size: .8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 14px; text-transform: uppercase; letter-spacing: .5px; display: flex; align-items: center; gap: 8px; }
+    .lic-card-title i { font-size: .9rem; }
+    .lic-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; font-size: .85rem; }
+    .lic-row + .lic-row { border-top: 1px solid rgba(255,255,255,0.04); }
+    .lic-row .label { color: var(--text-secondary); }
+    .lic-row .value { color: var(--text-primary); font-weight: 600; font-family: monospace; direction: ltr; text-align: right; }
+    .lic-row .value.accent { color: #ffcc00; }
+    .lic-row .value.green { color: #10b981; }
+    .lic-row .value.red { color: #ef4444; }
+    .lic-row .value.warn { color: #ff9f43; }
+    .lic-payments-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .lic-payments-table th { text-align: right; padding: 10px 12px; color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: .75rem; text-transform: uppercase; }
+    .lic-payments-table td { padding: 10px 12px; color: var(--text-primary); border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .lic-payments-table tr:last-child td { border-bottom: none; }
+    .lic-payments-table .pay-status { padding: 3px 10px; border-radius: 12px; font-size: .75rem; font-weight: 600; }
+    .lic-payments-table .pay-status.completed { background: rgba(16,185,129,.12); color: #10b981; }
+    .lic-payments-table .pay-status.pending { background: rgba(255,159,67,.12); color: #ff9f43; }
+    .lic-payments-table .pay-status.failed { background: rgba(239,68,68,.12); color: #ef4444; }
+    .lic-empty { text-align: center; padding: 20px; color: var(--text-secondary); font-size: .85rem; }
+    .lic-copy-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 2px 6px; font-size: .8rem; border-radius: 4px; transition: all .2s; }
+    .lic-copy-btn:hover { color: #ffcc00; background: rgba(255,204,0,0.1); }
+    .lic-renew-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: linear-gradient(135deg, #ffcc00, #ff9900); color: #000; border: none; border-radius: 10px; font-weight: 700; font-size: .88rem; cursor: pointer; font-family: inherit; transition: all .3s; text-decoration: none; margin-top: 10px; }
+    .lic-renew-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(255,204,0,0.35); }
+    .lic-no-license-msg { text-align: center; padding: 40px 20px; }
+    .lic-no-license-msg h3 { color: var(--text-primary); margin-bottom: 8px; }
+    .lic-no-license-msg p { color: var(--text-secondary); font-size: .88rem; margin-bottom: 16px; }
+</style>
+
+<div style="padding: 16px;">
+    <div class="lic-header">
+        <h2><i class="fas fa-shield-alt"></i> <span data-i18n="license.title">معلومات الترخيص</span></h2>
+        <button class="lic-refresh-btn" onclick="loadLicenseInfo()"><i class="fas fa-sync-alt"></i> <span data-i18n="license.refresh">تحديث</span></button>
+    </div>
+    <div id="lic-content">
+        <div class="lic-loading"><div class="spinner"></div> <span data-i18n="license.loading">جاري تحميل معلومات الترخيص...</span></div>
+    </div>
+</div>
+
+<script>
+function loadLicenseInfo() {
+    var el = document.getElementById('lic-content');
+    el.innerHTML = '<div class="lic-loading"><div class="spinner"></div> <span>' + t('license.loading') + '</span></div>';
+    
+    fetch('/api/license-info')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (!d.success) {
+                el.innerHTML = '<div class="lic-error"><i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:12px;display:block;"></i>' + (d.error || t('license.error')) + '<br><button class="lic-refresh-btn" onclick="loadLicenseInfo()" style="margin-top:16px"><i class="fas fa-sync-alt"></i> ' + t('license.retry') + '</button></div>';
+                return;
+            }
+            renderLicenseInfo(d);
+        })
+        .catch(function(e) {
+            el.innerHTML = '<div class="lic-error"><i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:12px;display:block;"></i>' + t('license.conn_error') + '<br><button class="lic-refresh-btn" onclick="loadLicenseInfo()" style="margin-top:16px"><i class="fas fa-sync-alt"></i> ' + t('license.retry') + '</button></div>';
+        });
+}
+
+function renderLicenseInfo(d) {
+    var el = document.getElementById('lic-content');
+    var statusClass = 'no_license';
+    var statusText = t('license.no_license');
+    if (d.status === 'active') { statusClass = 'active'; statusText = t('license.status_active'); }
+    else if (d.status === 'grace') { statusClass = 'grace'; statusText = t('license.status_grace'); }
+    else if (d.status === 'expired') { statusClass = 'expired'; statusText = t('license.status_expired'); }
+    else if (d.status === 'suspended') { statusClass = 'suspended'; statusText = t('license.status_suspended'); }
+
+    var html = '';
+    
+    // Status badge
+    html += '<div style="margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">';
+    html += '<span class="lic-status-badge ' + statusClass + '">' + statusText + '</span>';
+    if (d.days_remaining !== null && d.days_remaining !== undefined) {
+        var daysClass = d.days_remaining < 0 ? 'red' : (d.days_remaining < 7 ? 'warn' : 'green');
+        var daysText = d.days_remaining < 0 ? t('license.expired') : (d.days_remaining === 0 ? t('license.last_day') : d.days_remaining + ' ' + t('license.days_remaining'));
+        html += '<span style="color:var(--text-secondary);font-size:.85rem;"><i class="fas fa-clock"></i> ' + daysText + '</span>';
+    }
+    html += '</div>';
+
+    // Cards grid
+    html += '<div class="lic-cards">';
+
+    // License Info Card
+    html += '<div class="lic-card">';
+    html += '<div class="lic-card-title"><i class="fas fa-key"></i> ' + t('license.license_info') + '</div>';
+    html += licRow(t('license.serial'), '<span class="accent">' + esc(d.license_key || '-') + '</span> <button class="lic-copy-btn" onclick="copyText(\'' + esc(d.license_key || '') + '\', this)"><i class="fas fa-copy"></i></button>', true);
+    html += licRow(t('license.status'), '<span class="lic-status-badge ' + statusClass + '" style="padding:2px 10px;font-size:.75rem;">' + statusText + '</span>', true);
+    if (d.plan) {
+        html += licRow(t('license.plan'), esc(d.plan.name || '-'));
+        if (d.plan.price > 0) html += licRow(t('license.price'), esc(d.plan.price + ' USD'));
+        if (d.plan.duration_days > 0) html += licRow(t('license.duration'), d.plan.duration_days + ' ' + t('license.days'));
+        if (d.plan.grace_period_days > 0) html += licRow(t('license.grace_period'), d.plan.grace_period_days + ' ' + t('license.days'));
+    }
+    html += '</div>';
+
+    // Dates Card
+    html += '<div class="lic-card">';
+    html += '<div class="lic-card-title"><i class="fas fa-calendar-alt"></i> ' + t('license.dates') + '</div>';
+    html += licRow(t('license.activated_at'), esc(d.activated_at || d.created_at || '-'));
+    html += licRow(t('license.created_at'), esc(d.created_at || '-'));
+    html += licRow(t('license.expires_at'), d.expires_at ? '<span class="' + (d.days_remaining !== null && d.days_remaining < 7 ? 'warn' : '') + '">' + esc(d.expires_at) + '</span>' : '<span class="green">' + t('license.lifetime') + '</span>', true);
+    if (d.grace_end_at) html += licRow(t('license.grace_end'), '<span class="warn">' + esc(d.grace_end_at) + '</span>', true);
+    html += licRow(t('license.last_verified'), esc(d.last_verified_at || '-'));
+    html += '</div>';
+
+    // Payments Card
+    html += '<div class="lic-card" style="grid-column: 1 / -1;">';
+    html += '<div class="lic-card-title"><i class="fas fa-credit-card"></i> ' + t('license.payments') + '</div>';
+    if (d.payments && d.payments.length > 0) {
+        html += '<div style="overflow-x:auto;"><table class="lic-payments-table"><thead><tr>';
+        html += '<th>' + t('license.pay_date') + '</th>';
+        html += '<th>' + t('license.pay_amount') + '</th>';
+        html += '<th>' + t('license.pay_method') + '</th>';
+        html += '<th>' + t('license.pay_status') + '</th>';
+        html += '</tr></thead><tbody>';
+        for (var j = 0; j < d.payments.length; j++) {
+            var p = d.payments[j];
+            var pStatus = p.payment_status || 'completed';
+            html += '<tr>';
+            html += '<td>' + esc(p.payment_date || '-') + '</td>';
+            html += '<td style="font-family:monospace;">' + esc((p.amount || 0) + ' ' + (p.currency || 'USD')) + '</td>';
+            html += '<td>' + esc(p.payment_method || '-') + '</td>';
+            html += '<td><span class="pay-status ' + pStatus + '">' + esc(pStatus) + '</span></td>';
+            html += '</tr>';
+        }
+        html += '</tbody></table></div>';
+    } else {
+        html += '<div class="lic-empty"><i class="fas fa-receipt" style="font-size:1.5rem;margin-bottom:8px;display:block;opacity:.4;"></i>' + t('license.no_payments') + '</div>';
+    }
+    html += '</div>';
+
+    html += '</div>'; // lic-cards
+
+    // Renew button
+    if (d.renewal_url) {
+        html += '<div style="text-align:center;margin-top:16px;"><a class="lic-renew-btn" href="' + esc(d.renewal_url) + '" target="_blank"><i class="fas fa-sync-alt"></i> ' + t('license.renew') + '</a></div>';
+    }
+
+    el.innerHTML = html;
+}
+
+function licRow(label, value, isHtml) {
+    return '<div class="lic-row"><span class="label">' + label + '</span><span class="value">' + (isHtml ? value : esc(value)) + '</span></div>';
+}
+
+function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(function() {
+        btn.innerHTML = '<i class="fas fa-check" style="color:#10b981;"></i>';
+        setTimeout(function() { btn.innerHTML = '<i class="fas fa-copy"></i>'; }, 1500);
+    });
+}
+
+loadLicenseInfo();
+</script>

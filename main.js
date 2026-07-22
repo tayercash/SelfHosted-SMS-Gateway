@@ -1542,7 +1542,7 @@ const acmeChallengeMiddleware = (req, res, next) => {
 // --- دالة التحقق للاكترvation (Middleware) ---
 const checkLicense = async (req, res, next) => {
     if (_sslPauseGuard) return next();
-    if (req.path === '/api/license-status' || req.path === '/api/activate-app') return next();
+    if (req.path === '/api/license-status' || req.path === '/api/activate-app' || req.path === '/api/license-info') return next();
     if (req.path === '/api/login') return next();
     if (MouGuard.isActive()) {
         return next();
@@ -3022,6 +3022,44 @@ app.post("/api/notification/settings", authenticateToken, isAdmin, async (req, r
         const { broadcastEnabled } = req.body;
         await db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ['broadcast_notif_enabled', broadcastEnabled ? '1' : '0']);
         res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get("/api/license-info", authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const key = req.query.key || _currentKey;
+        if (!key) return res.json({ success: false, error: 'No license key configured' });
+        const https = require('https');
+        const http = require('http');
+        const url = new URL(_SERVER_URL + '/license-info.php');
+        const transport = url.protocol === 'https:' ? https : http;
+        const postData = JSON.stringify({ license_key: key });
+        const options = {
+            hostname: url.hostname,
+            port: url.port || (url.protocol === 'https:' ? 443 : 80),
+            path: url.pathname,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) },
+            timeout: 10000,
+        };
+        const proxyReq = transport.request(options, (proxyRes) => {
+            let data = '';
+            proxyRes.on('data', (chunk) => { data += chunk; });
+            proxyRes.on('end', () => {
+                try {
+                    const parsed = JSON.parse(data);
+                    res.json(parsed);
+                } catch (e) {
+                    res.status(500).json({ success: false, error: 'Invalid response from license server' });
+                }
+            });
+        });
+        proxyReq.on('error', (e) => { res.status(500).json({ success: false, error: 'Connection error: ' + e.message }); });
+        proxyReq.on('timeout', () => { proxyReq.destroy(); res.status(500).json({ success: false, error: 'Request timed out' }); });
+        proxyReq.write(postData);
+        proxyReq.end();
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
