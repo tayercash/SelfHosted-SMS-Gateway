@@ -622,10 +622,6 @@
                         dir="ltr">
                 </div>
                 <div class="form-group">
-                    <label data-i18n="transfer.api_token">مفتاح API (اختياري)</label>
-                    <input type="text" id="ts-srv-token" placeholder="Bearer token" dir="ltr">
-                </div>
-                <div class="form-group">
                     <label data-i18n="transfer.encryption_key">مفتاح التشفير XOR (اختياري)</label>
                     <input type="text" id="ts-srv-encryption-key" placeholder="Shared secret key" dir="ltr">
                 </div>
@@ -980,7 +976,6 @@
             form.classList.remove('active');
             document.getElementById('ts-srv-name').value = '';
             document.getElementById('ts-srv-url').value = '';
-            document.getElementById('ts-srv-token').value = '';
             document.getElementById('ts-srv-encryption-key').value = '';
         } else {
             form.classList.add('active');
@@ -991,7 +986,6 @@
     function ts_addServer() {
         var name = document.getElementById('ts-srv-name').value.trim();
         var url = document.getElementById('ts-srv-url').value.trim();
-        var token = document.getElementById('ts-srv-token').value.trim();
         var encryptionKey = document.getElementById('ts-srv-encryption-key').value.trim();
         if (!name || !url) {
             ts_showToast(t('transfer.fill_all_fields') || 'يرجى ملء جميع الحقول', true);
@@ -1001,7 +995,7 @@
             url: '/api/forward-servers',
             type: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ name: name, url: url, token: token, encryption_key: encryptionKey }),
+            data: JSON.stringify({ name: name, url: url, encryption_key: encryptionKey }),
             success: function (res) {
                 if (res.success) {
                     ts_showToast('✅ ' + (t('transfer.server_added') || 'تمت إضافة السيرفر'));
@@ -1102,7 +1096,6 @@
         form.classList.add('active');
         document.getElementById('ts-srv-name').value = srv.name || '';
         document.getElementById('ts-srv-url').value = srv.url || '';
-        document.getElementById('ts-srv-token').value = srv.token || '';
         document.getElementById('ts-srv-encryption-key').value = srv.encryption_key || '';
         document.getElementById('ts-srv-name').focus();
 
@@ -1121,7 +1114,6 @@
     function ts_updateServer(id) {
         var name = document.getElementById('ts-srv-name').value.trim();
         var url = document.getElementById('ts-srv-url').value.trim();
-        var token = document.getElementById('ts-srv-token').value.trim();
         var encryptionKey = document.getElementById('ts-srv-encryption-key').value.trim();
         if (!name || !url) {
             ts_showToast(t('transfer.fill_all_fields') || 'يرجى ملء جميع الحقول', true);
@@ -1131,7 +1123,7 @@
             url: '/api/forward-servers/' + id,
             type: 'PUT',
             contentType: 'application/json',
-            data: JSON.stringify({ name: name, url: url, token: token, encryption_key: encryptionKey }),
+            data: JSON.stringify({ name: name, url: url, encryption_key: encryptionKey }),
             success: function (res) {
                 if (res.success) {
                     ts_showToast('✅ ' + (t('transfer.server_updated') || 'تم تعديل السيرفر'));
