@@ -1133,7 +1133,7 @@
     function ts_openWebhookInfo() {
         var host = window.location.origin;
         document.getElementById('wh-url-display').textContent = host + '/api/incoming-payments/receive';
-        PopupManager.openPopup('webhook-info-popup');
+        (window.parent || window).PopupManager.openPopup('webhook-info-popup');
     }
 
     function ts_copyWhUrl() {
