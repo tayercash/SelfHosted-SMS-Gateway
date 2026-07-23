@@ -648,7 +648,7 @@
 <!-- Webhook Info Popup -->
 <div class="mou_popup" id="webhook-info-popup">
     <div class="mou_popup_container" style="max-width:720px;">
-        <div class="mou_popup_header"><span><i class="fas fa-code"></i> معلومات الربط مع المواقع الخارجية</span><span class="close_popup" data-closepopup="webhook-info-popup"></span></div>
+        <div class="mou_popup_header"><span><i class="fas fa-code"></i> معلومات الربط مع المواقع الخارجية</span><span class="close_popup" onclick="ts_closeWebhookPopup()"></span></div>
         <div class="mou_popup_body" style="padding:20px;">
             <div style="font-size:0.85rem;color:var(--text-dim);margin-bottom:12px;">
                 كل رسالة SMS واردة أو صادرة بتتبعت تلقائياً لكل سيرفر مفعل في هذا البريد:
@@ -1130,10 +1130,22 @@
     ts_loadServers();
     ts_loadTayercash();
 
+    function ts_closeWebhookPopup() {
+        var el = document.getElementById('webhook-info-popup');
+        el.classList.remove('show');
+        el.classList.add('hide');
+        document.body.style.overflow = 'unset';
+    }
+
     function ts_openWebhookInfo() {
         var host = window.location.origin;
         document.getElementById('wh-url-display').textContent = host + '/api/incoming-payments/receive';
-        (window.parent || window).PopupManager.openPopup('webhook-info-popup');
+        var el = document.getElementById('webhook-info-popup');
+        el.classList.remove('hide');
+        void el.offsetHeight;
+        el.classList.add('show');
+        document.body.style.overflow = 'hidden';
+        el.onclick = function(e) { if (e.target === el) ts_closeWebhookPopup(); };
     }
 
     function ts_copyWhUrl() {
