@@ -719,14 +719,29 @@
       <span class="var">received_at</span>, <span class="var">message_text</span>
     } = <span class="var">body</span>;
 
-    <span class="kw">if</span> (!<span class="var">amount</span> || !<span class="var">sender_number</span>) {
-      <span class="kw">return</span> <span class="var">res</span>.<span class="fn">status</span>(<span class="num">400</span>).<span class="fn">json</span>({ <span class="var">error</span>: <span class="str">'amount and sender_number are required'</span> });
+    <span class="kw">const</span> <span class="var">payType</span> = (<span class="var">type</span> || <span class="str">'incoming'</span>).<span class="fn">toLowerCase</span>();
+
+    <span class="kw">if</span> (<span class="var">payType</span> === <span class="str">'incoming'</span>) {
+      <span class="cm">// واردة — حد بعت فلوس لمحفظتك</span>
+      <span class="var">console</span>.<span class="fn">log</span>(<span class="str">`💰 واردة: ${amount} من ${sender_number} (${sender_name})`</span>);
+      <span class="cm">// من:</span> <span class="var">sender_number</span>, <span class="var">sender_name</span>
+      <span class="cm">// إلى محفظتك:</span> <span class="var">receiver_number</span>
+      <span class="cm">// المبلغ + الرسوم + الرصيد بعد:</span> <span class="var">amount</span>, <span class="var">transfer_fee</span>, <span class="var">balance_after</span>
+
+    } <span class="kw">else</span> <span class="kw">if</span> (<span class="var">payType</span> === <span class="str">'outgoing'</span>) {
+      <span class="cm">// صادرة — انت بعتت فلوس</span>
+      <span class="var">console</span>.<span class="fn">log</span>(<span class="str">`📤 صادرة: ${amount} إلى ${receiver_number}`</span>);
+      <span class="cm">// من محفظتك:</span> <span class="var">sender_number</span>
+      <span class="cm">// إلى:</span> <span class="var">receiver_number</span>
+      <span class="cm">// المبلغ + الرسوم + الرصيد بعد:</span> <span class="var">amount</span>, <span class="var">transfer_fee</span>, <span class="var">balance_after</span>
     }
 
-    <span class="var">console</span>.<span class="fn">log</span>(<span class="str">`Payment: ${amount} EGP from ${sender_number}`</span>);
+    <span class="cm">// حفظ في قاعدة البيانات...</span>
+    <span class="cm">// await db.run('INSERT INTO payments ...', [payType, amount, ...]);</span>
 
-    <span class="var">res</span>.<span class="fn">json</span>({ <span class="var">success</span>: <span class="num">true</span>, <span class="var">message</span>: <span class="str">'Payment received'</span> });
+    <span class="var">res</span>.<span class="fn">json</span>({ <span class="var">success</span>: <span class="num">true</span>, <span class="var">message</span>: <span class="str">'Payment received'</span>, <span class="var">type</span>: <span class="var">payType</span> });
   } <span class="kw">catch</span> (<span class="var">err</span>) {
+    <span class="var">console</span>.<span class="fn">error</span>(<span class="str">'Error:'</span>, <span class="var">err</span>);
     <span class="var">res</span>.<span class="fn">status</span>(<span class="num">500</span>).<span class="fn">json</span>({ <span class="var">error</span>: <span class="var">err</span>.<span class="var">message</span> });
   }
 });
@@ -759,17 +774,36 @@
     <span class="var">$input</span> = <span class="var">json_decode</span>(<span class="var">$decrypted</span>, <span class="num">true</span>);
 }
 
-<span class="var">$amount</span>   = <span class="var">$input</span>[<span class="str">'amount'</span>]   ?? <span class="str">''</span>;
-<span class="var">$sender</span>   = <span class="var">$input</span>[<span class="str">'sender_number'</span>] ?? <span class="str">''</span>;
+<span class="var">$type</span>          = <span class="var">$input</span>[<span class="str">'type'</span>]          ?? <span class="str">'incoming'</span>;
+<span class="var">$amount</span>        = <span class="var">$input</span>[<span class="str">'amount'</span>]        ?? <span class="str">''</span>;
+<span class="var">$senderNumber</span>  = <span class="var">$input</span>[<span class="str">'sender_number'</span>]  ?? <span class="str">''</span>;
+<span class="var">$senderName</span>    = <span class="var">$input</span>[<span class="str">'sender_name'</span>]    ?? <span class="str">''</span>;
+<span class="var">$receiverNumber</span> = <span class="var">$input</span>[<span class="str">'receiver_number'</span>] ?? <span class="str">''</span>;
+<span class="var">$transferFee</span>  = <span class="var">$input</span>[<span class="str">'transfer_fee'</span>]  ?? <span class="num">0</span>;
+<span class="var">$balanceAfter</span>  = <span class="var">$input</span>[<span class="str">'balance_after'</span>]  ?? <span class="str">''</span>;
+<span class="var">$receivedAt</span>   = <span class="var">$input</span>[<span class="str">'received_at'</span>]   ?? <span class="str">''</span>;
+<span class="var">$messageText</span>   = <span class="var">$input</span>[<span class="str">'message_text'</span>]   ?? <span class="str">''</span>;
 
-<span class="kw">if</span> (!<span class="var">$amount</span> || !<span class="var">$sender</span>) {
-    <span class="var">http_response_code</span>(<span class="num">400</span>);
-    <span class="kw">echo</span> <span class="var">json_encode</span>([<span class="str">'error'</span> <span class="op">=></span> <span class="str">'amount and sender_number are required'</span>]);
-    <span class="kw">exit</span>;
+<span class="var">$payType</span> = <span class="fn">strtolower</span>(<span class="fn">trim</span>(<span class="var">$type</span>));
+
+<span class="kw">if</span> (<span class="var">$payType</span> === <span class="str">'incoming'</span>) {
+    <span class="cm">// واردة — حد بعت فلوس لمحفظتك</span>
+    <span class="fn">error_log</span>(<span class="str">"💰 واردة: <span class="op">$</span>amount من <span class="op">$</span>senderNumber (<span class="op">$</span>senderName)"</span>);
+    <span class="cm">// من:</span> <span class="var">$senderNumber</span>, <span class="var">$senderName</span>
+    <span class="cm">// إلى محفظتك:</span> <span class="var">$receiverNumber</span>
+
+} <span class="kw">elseif</span> (<span class="var">$payType</span> === <span class="str">'outgoing'</span>) {
+    <span class="cm">// صادرة — انت بعتت فلوس</span>
+    <span class="fn">error_log</span>(<span class="str">"📤 صادرة: <span class="op">$</span>amount إلى <span class="op">$</span>receiverNumber"</span>);
+    <span class="cm">// من محفظتك:</span> <span class="var">$senderNumber</span>
+    <span class="cm">// إلى:</span> <span class="var">$receiverNumber</span>
 }
 
+<span class="cm">// حفظ في قاعدة البيانات...</span>
+<span class="cm">// $stmt = $pdo->prepare("INSERT INTO payments ...");</span>
+
 <span class="var">header</span>(<span class="str">'Content-Type: application/json'</span>);
-<span class="kw">echo</span> <span class="var">json_encode</span>([<span class="str">'success'</span> <span class="op">=></span> <span class="num">true</span>, <span class="str">'message'</span> <span class="op">=></span> <span class="str">'Payment received'</span>]);</pre>
+<span class="kw">echo</span> <span class="var">json_encode</span>([<span class="str">'success'</span> <span class="op">=></span> <span class="num">true</span>, <span class="str">'message'</span> <span class="op">=></span> <span class="str">'Payment received'</span>, <span class="str">'type'</span> <span class="op">=></span> <span class="var">$payType</span>]);</pre>
                 </div>
             </div>
 
@@ -797,13 +831,34 @@
         <span class="var">decrypted</span> = <span class="fn">xor_decrypt</span>(<span class="var">body</span>[<span class="str">'data'</span>], <span class="var">ENCRYPTION_KEY</span>)
         <span class="var">body</span> = <span class="var">json</span>.<span class="fn">loads</span>(<span class="var">decrypted</span>)
 
-    <span class="var">amount</span> = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'amount'</span>, <span class="str">''</span>)
-    <span class="var">sender</span> = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'sender_number'</span>, <span class="str">''</span>)
+    <span class="var">tx_type</span>        = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'type'</span>, <span class="str">'incoming'</span>)
+    <span class="var">amount</span>         = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'amount'</span>, <span class="str">''</span>)
+    <span class="var">sender_number</span>  = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'sender_number'</span>, <span class="str">''</span>)
+    <span class="var">sender_name</span>    = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'sender_name'</span>, <span class="str">''</span>)
+    <span class="var">receiver_number</span> = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'receiver_number'</span>, <span class="str">''</span>)
+    <span class="var">transfer_fee</span>   = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'transfer_fee'</span>, <span class="num">0</span>)
+    <span class="var">balance_after</span>  = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'balance_after'</span>, <span class="str">''</span>)
+    <span class="var">received_at</span>    = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'received_at'</span>, <span class="str">''</span>)
+    <span class="var">message_text</span>   = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'message_text'</span>, <span class="str">''</span>)
 
-    <span class="kw">if</span> <span class="kw">not</span> <span class="var">amount</span> <span class="kw">or</span> <span class="kw">not</span> <span class="var">sender</span>:
-        <span class="kw">return</span> <span class="fn">jsonify</span>({<span class="str">'error'</span>: <span class="str">'amount and sender_number required'</span>}), <span class="num">400</span>
+    <span class="var">pay_type</span> = <span class="var">tx_type</span>.<span class="fn">strip</span>().<span class="fn">lower</span>()
 
-    <span class="kw">return</span> <span class="fn">jsonify</span>({<span class="str">'success'</span>: <span class="num">True</span>, <span class="str">'message'</span>: <span class="str">'Payment received'</span>})</pre>
+    <span class="kw">if</span> <span class="var">pay_type</span> == <span class="str">'incoming'</span>:
+        <span class="cm"># واردة — حد بعت فلوس لمحفظتك</span>
+        <span class="fn">print</span>(<span class="str">f'💰 واردة: {amount} من {sender_number} ({sender_name})'</span>)
+        <span class="cm"># من:</span> sender_number, sender_name
+        <span class="cm"># إلى محفظتك:</span> receiver_number
+
+    <span class="kw">elif</span> <span class="var">pay_type</span> == <span class="str">'outgoing'</span>:
+        <span class="cm"># صادرة — انت بعتت فلوس</span>
+        <span class="fn">print</span>(<span class="str">f'📤 صادرة: {amount} إلى {receiver_number}'</span>)
+        <span class="cm"># من محفظتك:</span> sender_number
+        <span class="cm"># إلى:</span> receiver_number
+
+    <span class="cm"># حفظ في قاعدة البيانات...</span>
+    <span class="cm"># cursor.execute("INSERT INTO payments ...", (...))</span>
+
+    <span class="kw">return</span> <span class="fn">jsonify</span>({<span class="str">'success'</span>: <span class="num">True</span>, <span class="str">'message'</span>: <span class="str">'Payment received'</span>, <span class="str">'type'</span>: <span class="var">pay_type</span>})</pre>
                 </div>
             </div>
         </div>
