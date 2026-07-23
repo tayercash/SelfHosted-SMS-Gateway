@@ -192,6 +192,29 @@
 
     .lic-renew-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: linear-gradient(135deg, #ffcc00, #ff9900); color: #000; border: none; border-radius: 10px; font-weight: 700; font-size: .88rem; cursor: pointer; font-family: inherit; transition: all .3s; text-decoration: none; }
     .lic-renew-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(255,204,0,0.35); }
+
+    /* Live Limits Bar */
+    .license-limits-bar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: rgba(30,30,30,0.4);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255,255,255,0.05);
+        border-radius: 14px;
+        padding: 10px 18px;
+        margin-bottom: 16px;
+        font-size: .82rem;
+    }
+    .license-limits-bar .limits-plan { font-weight: 700; color: #ffcc00; white-space: nowrap; }
+    .license-limits-bar .limits-divider { width: 1px; height: 22px; background: rgba(255,255,255,0.08); }
+    .license-limits-bar .limits-item { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+    .license-limits-bar .limits-item .limits-current { font-weight: 700; color: var(--text-primary); }
+    .license-limits-bar .limits-bar-track { flex: 1; min-width: 80px; max-width: 180px; height: 6px; background: rgba(255,255,255,.06); border-radius: 3px; overflow: hidden; }
+    .license-limits-bar .limits-bar-fill { height: 100%; border-radius: 3px; background: #10b981; transition: width .4s ease; }
+    .license-limits-bar .limits-bar-fill.warn { background: #f59e0b; }
+    .license-limits-bar .limits-bar-fill.over { background: #ef4444; }
+    .license-limits-bar .limits-unlimited { color: #10b981; font-weight: 600; }
 </style>
 
 <div style="padding: 16px;">
@@ -200,6 +223,25 @@
             <i class="fas fa-shield-alt"></i> <span data-i18n="license.title">معلومات الترخيص</span>
         </h2>
         <button class="lic-refresh-btn" onclick="loadLicenseInfo()"><i class="fas fa-sync-alt"></i> <span data-i18n="license.refresh">تحديث</span></button>
+    </div>
+    <div id="license_limits_bar" class="license-limits-bar" style="display:none;">
+        <span class="limits-plan" id="limits_plan_name"></span>
+        <div class="limits-divider"></div>
+        <div class="limits-item">
+            <i class="fas fa-plug" style="color:#ffcc00;opacity:.6;"></i>
+            <span data-i18n="modems.limit_gateways">Gateways</span>:
+            <span class="limits-current" id="limits_gw_current">0</span>
+            <span id="limits_gw_max"></span>
+            <div class="limits-bar-track" id="limits_gw_track"><div class="limits-bar-fill" id="limits_gw_fill"></div></div>
+        </div>
+        <div class="limits-divider"></div>
+        <div class="limits-item">
+            <i class="fas fa-mobile-alt" style="color:#10b981;opacity:.6;"></i>
+            <span data-i18n="modems.limit_clients">Clients</span>:
+            <span class="limits-current" id="limits_cl_current">0</span>
+            <span id="limits_cl_max"></span>
+            <div class="limits-bar-track" id="limits_cl_track"><div class="limits-bar-fill" id="limits_cl_fill"></div></div>
+        </div>
     </div>
     <div id="lic-content">
         <div class="lic-loading"><div class="spinner"></div> <span data-i18n="license.loading">جاري تحميل معلومات الترخيص...</span></div>
@@ -364,4 +406,58 @@ function copyKey() {
 }
 
 loadLicenseInfo();
+loadLicenseLimits();
+
+function loadLicenseLimits() {
+    fetch('/api/license-limits')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data || !data.success) return;
+            var bar = document.getElementById('license_limits_bar');
+            if (!bar) return;
+            bar.style.display = 'flex';
+            var lim = data.limits;
+            var usage = data.usage;
+
+            document.getElementById('limits_plan_name').textContent = lim.plan_name || '\u2014';
+
+            var gwCur = usage.gateways || 0;
+            var gwMax = lim.max_projects || 0;
+            document.getElementById('limits_gw_current').textContent = gwCur;
+            if (gwMax === 0) {
+                document.getElementById('limits_gw_max').textContent = '\u221E';
+                document.getElementById('limits_gw_max').className = 'limits-unlimited';
+                document.getElementById('limits_gw_track').style.display = 'none';
+            } else {
+                var gwPct = Math.min(100, Math.round((gwCur / gwMax) * 100));
+                document.getElementById('limits_gw_max').textContent = '/ ' + gwMax;
+                document.getElementById('limits_gw_max').className = '';
+                document.getElementById('limits_gw_track').style.display = '';
+                var gwFill = document.getElementById('limits_gw_fill');
+                gwFill.style.width = gwPct + '%';
+                gwFill.className = 'limits-bar-fill' + (gwPct > 80 ? (gwPct >= 100 ? ' over' : ' warn') : '');
+            }
+
+            var clCur = usage.clients || 0;
+            var clMax = lim.max_licenses || 0;
+            document.getElementById('limits_cl_current').textContent = clCur;
+            if (clMax === 0) {
+                document.getElementById('limits_cl_max').textContent = '\u221E';
+                document.getElementById('limits_cl_max').className = 'limits-unlimited';
+                document.getElementById('limits_cl_track').style.display = 'none';
+            } else {
+                var clPct = Math.min(100, Math.round((clCur / clMax) * 100));
+                document.getElementById('limits_cl_max').textContent = '/ ' + clMax;
+                document.getElementById('limits_cl_max').className = '';
+                document.getElementById('limits_cl_track').style.display = '';
+                var clFill = document.getElementById('limits_cl_fill');
+                clFill.style.width = clPct + '%';
+                clFill.className = 'limits-bar-fill' + (clPct > 80 ? (clPct >= 100 ? ' over' : ' warn') : '');
+            }
+        })
+        .catch(function() {
+            var bar = document.getElementById('license_limits_bar');
+            if (bar) bar.style.display = 'none';
+        });
+}
 </script>

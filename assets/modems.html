@@ -273,72 +273,6 @@
         }
     }
 
-    .license-limits-bar {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        background: var(--sidebar-bg);
-        border: 1px solid var(--mou_border_color);
-        border-radius: 14px;
-        padding: 10px 18px;
-        margin-bottom: 16px;
-        font-size: .82rem;
-    }
-
-    .license-limits-bar .limits-plan {
-        font-weight: 700;
-        color: var(--primary-color);
-        white-space: nowrap;
-    }
-
-    .license-limits-bar .limits-divider {
-        width: 1px;
-        height: 22px;
-        background: var(--mou_border_color);
-    }
-
-    .license-limits-bar .limits-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        color: var(--text-dim);
-    }
-
-    .license-limits-bar .limits-item .limits-current {
-        font-weight: 700;
-        color: var(--text-main);
-    }
-
-    .license-limits-bar .limits-bar-track {
-        flex: 1;
-        min-width: 80px;
-        max-width: 180px;
-        height: 6px;
-        background: rgba(255, 255, 255, .06);
-        border-radius: 3px;
-        overflow: hidden;
-    }
-
-    .license-limits-bar .limits-bar-fill {
-        height: 100%;
-        border-radius: 3px;
-        background: #2ec76e;
-        transition: width .4s ease;
-    }
-
-    .license-limits-bar .limits-bar-fill.warn {
-        background: #f59e0b;
-    }
-
-    .license-limits-bar .limits-bar-fill.over {
-        background: #ef4444;
-    }
-
-    .license-limits-bar .limits-unlimited {
-        color: #2ec76e;
-        font-weight: 600;
-    }
-
     .modems-empty {
         text-align: center;
         padding: 60px 20px;
@@ -406,26 +340,6 @@
                 style="padding:6px 12px;border-radius:20px;border:1px solid var(--mou_border_color);background:transparent;color:var(--text-dim);cursor:pointer;font-size:0.85rem;transition:all 0.3s;">
                 <i class="fas fa-sync-alt"></i>
             </button>
-        </div>
-    </div>
-
-    <div id="license_limits_bar" class="license-limits-bar" style="display:none;">
-        <span class="limits-plan" id="limits_plan_name"></span>
-        <div class="limits-divider"></div>
-        <div class="limits-item">
-            <i class="fas fa-plug" style="color:var(--primary-color);opacity:.6;"></i>
-            <span data-i18n="modems.limit_gateways">Gateways</span>:
-            <span class="limits-current" id="limits_gw_current">0</span>
-            <span id="limits_gw_max"></span>
-            <div class="limits-bar-track" id="limits_gw_track"><div class="limits-bar-fill" id="limits_gw_fill"></div></div>
-        </div>
-        <div class="limits-divider"></div>
-        <div class="limits-item">
-            <i class="fas fa-mobile-alt" style="color:#2ec76e;opacity:.6;"></i>
-            <span data-i18n="modems.limit_clients">Clients</span>:
-            <span class="limits-current" id="limits_cl_current">0</span>
-            <span id="limits_cl_max"></span>
-            <div class="limits-bar-track" id="limits_cl_track"><div class="limits-bar-fill" id="limits_cl_fill"></div></div>
         </div>
     </div>
 
@@ -530,58 +444,6 @@
         container.innerHTML = h;
     }
 
-    function loadLicenseLimits() {
-        $.get('/api/license-limits', function (data) {
-            if (!data || !data.success) return;
-            var bar = document.getElementById('license_limits_bar');
-            if (!bar) return;
-            bar.style.display = 'flex';
-            var lim = data.limits;
-            var usage = data.usage;
-
-            document.getElementById('limits_plan_name').textContent = lim.plan_name || '—';
-
-            /* Gateways */
-            var gwCur = usage.gateways || 0;
-            var gwMax = lim.max_projects || 0;
-            document.getElementById('limits_gw_current').textContent = gwCur;
-            if (gwMax === 0) {
-                document.getElementById('limits_gw_max').textContent = '∞';
-                document.getElementById('limits_gw_max').className = 'limits-unlimited';
-                document.getElementById('limits_gw_track').style.display = 'none';
-            } else {
-                var gwPct = Math.min(100, Math.round((gwCur / gwMax) * 100));
-                document.getElementById('limits_gw_max').textContent = '/ ' + gwMax;
-                document.getElementById('limits_gw_max').className = '';
-                document.getElementById('limits_gw_track').style.display = '';
-                var gwFill = document.getElementById('limits_gw_fill');
-                gwFill.style.width = gwPct + '%';
-                gwFill.className = 'limits-bar-fill' + (gwPct > 80 ? (gwPct >= 100 ? ' over' : ' warn') : '');
-            }
-
-            /* Clients */
-            var clCur = usage.clients || 0;
-            var clMax = lim.max_licenses || 0;
-            document.getElementById('limits_cl_current').textContent = clCur;
-            if (clMax === 0) {
-                document.getElementById('limits_cl_max').textContent = '∞';
-                document.getElementById('limits_cl_max').className = 'limits-unlimited';
-                document.getElementById('limits_cl_track').style.display = 'none';
-            } else {
-                var clPct = Math.min(100, Math.round((clCur / clMax) * 100));
-                document.getElementById('limits_cl_max').textContent = '/ ' + clMax;
-                document.getElementById('limits_cl_max').className = '';
-                document.getElementById('limits_cl_track').style.display = '';
-                var clFill = document.getElementById('limits_cl_fill');
-                clFill.style.width = clPct + '%';
-                clFill.className = 'limits-bar-fill' + (clPct > 80 ? (clPct >= 100 ? ' over' : ' warn') : '');
-            }
-        }).fail(function () {
-            var bar = document.getElementById('license_limits_bar');
-            if (bar) bar.style.display = 'none';
-        });
-    }
-
     function loadModems() {
         $.post('/api/ussd/list-modems', function (data) {
             if (data && data.modems) {
@@ -608,14 +470,12 @@
     }
 
     loadModems();
-    loadLicenseLimits();
 
     socket.on('modem-list', function (data) {
         if (data && data.modems) {
             localModemList = data.modems;
             window.localModemList = data.modems;
             renderModems(data.modems);
-            loadLicenseLimits();
         }
     });
 
