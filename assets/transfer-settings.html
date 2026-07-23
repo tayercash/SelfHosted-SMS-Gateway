@@ -683,36 +683,46 @@
             <div id="wh-node" class="wh-code-panel active">
                 <div class="wh-code-block">
                     <button class="wh-code-copy" onclick="ts_copyCode(this)"><i class="fas fa-copy"></i> Copy</button>
-<pre><span class="kw">const</span> <span class="var">http</span> = <span class="fn">require</span>(<span class="str">'http'</span>);
+<pre><span class="kw">const</span> <span class="var">express</span> = <span class="fn">require</span>(<span class="str">'express'</span>);
+<span class="kw">const</span> <span class="var">app</span> = <span class="fn">express</span>();
+<span class="var">app</span>.<span class="fn">use</span>(<span class="var">express</span>.<span class="fn">json</span>());
 
-<span class="kw">const</span> <span class="var">server</span> = <span class="fn">http</span>.<span class="fn">createServer</span>((<span class="var">req</span>, <span class="var">res</span>) <span class="op">=></span> {
-  <span class="kw">if</span> (<span class="var">req</span>.<span class="var">url</span> <span class="op">===</span> <span class="str">'/api/incoming-payments/receive'</span> <span class="op">&amp;&amp;</span> <span class="var">req</span>.<span class="var">method</span> <span class="op">===</span> <span class="str">'POST'</span>) {
-    <span class="kw">let</span> <span class="var">body</span> = <span class="str">''</span>;
-    <span class="var">req</span>.<span class="fn">on</span>(<span class="str">'data'</span>, <span class="var">chunk</span> <span class="op">=></span> { <span class="var">body</span> += <span class="var">chunk</span>; });
-    <span class="var">req</span>.<span class="fn">on</span>(<span class="str">'end'</span>, () <span class="op">=></span> {
-      <span class="kw">const</span> <span class="var">data</span> = <span class="var">JSON</span>.<span class="fn">parse</span>(<span class="var">body</span>);
+<span class="var">app</span>.<span class="fn">post</span>(<span class="str">'/api/incoming-payments/receive'</span>, <span class="kw">async</span> (<span class="var">req</span>, <span class="var">res</span>) <span class="op">=></span> {
+  <span class="kw">try</span> {
+    <span class="kw">const</span> {
+      <span class="var">type</span>, <span class="var">amount</span>, <span class="var">sender_number</span>, <span class="var">sender_name</span>,
+      <span class="var">receiver_number</span>, <span class="var">transfer_fee</span>, <span class="var">balance_after</span>,
+      <span class="var">received_at</span>, <span class="var">message_text</span>
+    } = <span class="var">req</span>.<span class="var">body</span>;
 
-      <span class="var">console</span>.<span class="fn">log</span>(<span class="str">'[SMS Gateway] New transaction:'</span>);
-      <span class="var">console</span>.<span class="fn">log</span>(<span class="str">'  Type:'</span>, <span class="var">data</span>.<span class="var">type</span>);
-      <span class="var">console</span>.<span class="fn">log</span>(<span class="str">'  Provider:'</span>, <span class="var">data</span>.<span class="var">provider</span>);
-      <span class="var">console</span>.<span class="fn">log</span>(<span class="str">'  Amount:'</span>, <span class="var">data</span>.<span class="var">amount</span>);
-      <span class="var">console</span>.<span class="fn">log</span>(<span class="str">'  Sender:'</span>, <span class="var">data</span>.<span class="var">sender_number</span>);
-      <span class="var">console</span>.<span class="fn">log</span>(<span class="str">'  Receiver:'</span>, <span class="var">data</span>.<span class="var">receiver_number</span>);
-      <span class="var">console</span>.<span class="fn">log</span>(<span class="str">'  Fee:'</span>, <span class="var">data</span>.<span class="var">transfer_fee</span>);
-      <span class="var">console</span>.<span class="fn">log</span>(<span class="str">'  Balance:'</span>, <span class="var">data</span>.<span class="var">balance_after</span>);
-      <span class="var">console</span>.<span class="fn">log</span>(<span class="str">'  Message:'</span>, <span class="var">data</span>.<span class="var">message_text</span>);
+    <span class="kw">if</span> (!<span class="var">amount</span> || !<span class="var">sender_number</span>) {
+      <span class="kw">return</span> <span class="var">res</span>.<span class="fn">status</span>(<span class="num">400</span>).<span class="fn">json</span>({ <span class="var">error</span>: <span class="str">'amount and sender_number are required'</span> });
+    }
 
-      <span class="var">res</span>.<span class="fn">writeHead</span>(<span class="num">200</span>, { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> });
-      <span class="var">res</span>.<span class="fn">end</span>(<span class="var">JSON</span>.<span class="fn">stringify</span>({ <span class="var">success</span>: <span class="num">true</span> }));
-    });
-  } <span class="kw">else</span> {
-    <span class="var">res</span>.<span class="fn">writeHead</span>(<span class="num">404</span>);
-    <span class="var">res</span>.<span class="fn">end</span>();
+    <span class="kw">const</span> <span class="var">payType</span> = (<span class="var">type</span> || <span class="str">'incoming'</span>).<span class="fn">toLowerCase</span>();
+
+    <span class="cm">// حفظ في قاعدة البيانات</span>
+    <span class="cm">// const result = await db.run(</span>
+    <span class="cm">//   `INSERT INTO incoming_payments</span>
+    <span class="cm">//    (type, amount, sender_number, sender_name, receiver_number,</span>
+    <span class="cm">//     transfer_fee, balance_after, received_at, message_text)</span>
+    <span class="cm">//    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,</span>
+    <span class="cm">//   [payType, amount, sender_number, sender_name || '',</span>
+    <span class="cm">//    receiver_number || '', transfer_fee || 0,</span>
+    <span class="cm">//    balance_after || 0, received_at || '', message_text || '']</span>
+    <span class="cm">// );</span>
+
+    <span class="var">console</span>.<span class="fn">log</span>(<span class="str">`<span class="op">${</span>payType<span class="op">}</span> payment: <span class="op">${</span>amount<span class="op">}</span> EGP from <span class="op">${</span>sender_number<span class="op">}</span>`</span>);
+
+    <span class="var">res</span>.<span class="fn">json</span>({ <span class="var">success</span>: <span class="num">true</span>, <span class="var">message</span>: <span class="str">'Payment received'</span> });
+  } <span class="kw">catch</span> (<span class="var">err</span>) {
+    <span class="var">console</span>.<span class="fn">error</span>(<span class="str">'Error receiving payment:'</span>, <span class="var">err</span>);
+    <span class="var">res</span>.<span class="fn">status</span>(<span class="num">500</span>).<span class="fn">json</span>({ <span class="var">error</span>: <span class="var">err</span>.<span class="var">message</span> });
   }
 });
 
-<span class="var">server</span>.<span class="fn">listen</span>(<span class="num">3000</span>, () <span class="op">=></span> {
-  <span class="var">console</span>.<span class="fn">log</span>(<span class="str">'Webhook server running on port 3000'</span>);
+<span class="var">app</span>.<span class="fn">listen</span>(<span class="num">3000</span>, () <span class="op">=></span> {
+  <span class="var">console</span>.<span class="fn">log</span>(<span class="str">'Server running on port 3000'</span>);
 });</pre>
                 </div>
             </div>
@@ -721,29 +731,41 @@
                 <div class="wh-code-block">
                     <button class="wh-code-copy" onclick="ts_copyCode(this)"><i class="fas fa-copy"></i> Copy</button>
 <pre><span class="op">&lt;?php</span>
-<span class="var">$_POST</span> = <span class="var">json_decode</span>(<span class="fn">file_get_contents</span>(<span class="str">'php://input'</span>), <span class="num">true</span>);
+<span class="var">$input</span> = <span class="var">json_decode</span>(<span class="fn">file_get_contents</span>(<span class="str">'php://input'</span>), <span class="num">true</span>);
 
-<span class="kw">if</span> (<span class="var">$_SERVER</span>[<span class="str">'REQUEST_METHOD'</span>] <span class="op">===</span> <span class="str">'POST'</span>) {
-    <span class="var">$type</span>     = <span class="var">$_POST</span>[<span class="str">'type'</span>]     ?? <span class="str">''</span>;
-    <span class="var">$provider</span> = <span class="var">$_POST</span>[<span class="str">'provider'</span>] ?? <span class="str">''</span>;
-    <span class="var">$amount</span>   = <span class="var">$_POST</span>[<span class="str">'amount'</span>]   ?? <span class="str">''</span>;
-    <span class="var">$sender</span>   = <span class="var">$_POST</span>[<span class="str">'sender_number'</span>]   ?? <span class="str">''</span>;
-    <span class="var">$receiver</span> = <span class="var">$_POST</span>[<span class="str">'receiver_number'</span>] ?? <span class="str">''</span>;
-    <span class="var">$fee</span>      = <span class="var">$_POST</span>[<span class="str">'transfer_fee'</span>]  ?? <span class="num">0</span>;
-    <span class="var">$balance</span>  = <span class="var">$_POST</span>[<span class="str">'balance_after'</span>] ?? <span class="str">''</span>;
-    <span class="var">$message</span>  = <span class="var">$_POST</span>[<span class="str">'message_text'</span>]  ?? <span class="str">''</span>;
-    <span class="var">$received</span> = <span class="var">$_POST</span>[<span class="str">'received_at'</span>]  ?? <span class="str">''</span>;
-
-    <span class="fn">error_log</span>(<span class="str">"[SMS Gateway] $type | $provider | $sender -> $receiver | $amount"</span>);
-
-    <span class="cm">// حفظ في قاعدة البيانات أو معالجة...</span>
-    <span class="cm">// saveToDatabase($type, $provider, $amount, $sender, ...);</span>
-
-    <span class="var">header</span>(<span class="str">'Content-Type: application/json'</span>);
-    <span class="kw">echo</span> <span class="var">json_encode</span>([<span class="str">'success'</span> <span class="op">=></span> <span class="num">true</span>]);
-} <span class="kw">else</span> {
+<span class="kw">if</span> (<span class="var">$_SERVER</span>[<span class="str">'REQUEST_METHOD'</span>] <span class="op">!==</span> <span class="str">'POST'</span>) {
     <span class="var">http_response_code</span>(<span class="num">404</span>);
-}</pre>
+    <span class="kw">exit</span>;
+}
+
+<span class="var">$type</span>     = <span class="var">$input</span>[<span class="str">'type'</span>]     ?? <span class="str">'incoming'</span>;
+<span class="var">$amount</span>   = <span class="var">$input</span>[<span class="str">'amount'</span>]   ?? <span class="str">''</span>;
+<span class="var">$sender</span>   = <span class="var">$input</span>[<span class="str">'sender_number'</span>]   ?? <span class="str">''</span>;
+<span class="var">$sName</span>    = <span class="var">$input</span>[<span class="str">'sender_name'</span>]    ?? <span class="str">''</span>;
+<span class="var">$receiver</span> = <span class="var">$input</span>[<span class="str">'receiver_number'</span>] ?? <span class="str">''</span>;
+<span class="var">$fee</span>      = <span class="var">$input</span>[<span class="str">'transfer_fee'</span>]  ?? <span class="num">0</span>;
+<span class="var">$balance</span>  = <span class="var">$input</span>[<span class="str">'balance_after'</span>] ?? <span class="num">0</span>;
+<span class="var">$received</span> = <span class="var">$input</span>[<span class="str">'received_at'</span>]  ?? <span class="str">''</span>;
+<span class="var">$message</span>  = <span class="var">$input</span>[<span class="str">'message_text'</span>]  ?? <span class="str">''</span>;
+
+<span class="kw">if</span> (!<span class="var">$amount</span> || !<span class="var">$sender</span>) {
+    <span class="var">header</span>(<span class="str">'Content-Type: application/json'</span>);
+    <span class="kw">echo</span> <span class="var">json_encode</span>([<span class="str">'error'</span> <span class="op">=></span> <span class="str">'amount and sender_number are required'</span>]);
+    <span class="kw">exit</span>;
+}
+
+<span class="cm">// حفظ في قاعدة البيانات</span>
+<span class="cm">// $stmt = $pdo->prepare("INSERT INTO incoming_payments</span>
+<span class="cm">//   (type, amount, sender_number, sender_name, receiver_number,</span>
+<span class="cm">//    transfer_fee, balance_after, received_at, message_text)</span>
+<span class="cm">//   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");</span>
+<span class="cm">// $stmt->execute([$type, $amount, $sender, $sName, $receiver,</span>
+<span class="cm">//   $fee, $balance, $received, $message]);</span>
+
+<span class="fn">error_log</span>(<span class="str">"[Webhook] <span class="op">$</span>type | <span class="op">$</span>sender -> <span class="op">$</span>receiver | <span class="op">$</span>amount EGP"</span>);
+
+<span class="var">header</span>(<span class="str">'Content-Type: application/json'</span>);
+<span class="kw">echo</span> <span class="var">json_encode</span>([<span class="str">'success'</span> <span class="op">=></span> <span class="num">true</span>, <span class="str">'message'</span> <span class="op">=></span> <span class="str">'Payment received'</span>]);</pre>
                 </div>
             </div>
 
@@ -755,26 +777,34 @@
 <span class="var">app</span> = <span class="fn">Flask</span>(<span class="var">__name__</span>)
 
 <span class="var">@app</span>.<span class="fn">route</span>(<span class="str">'/api/incoming-payments/receive'</span>, <span class="var">methods</span><span class="op">=</span>[<span class="str">'POST'</span>])
-<span class="kw">def</span> <span class="fn">receive_webhook</span>():
+<span class="kw">def</span> <span class="fn">receive_payment</span>():
     <span class="var">data</span> = <span class="var">request</span>.<span class="fn">get_json</span>()
 
-    <span class="var">tx_type</span>     = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'type'</span>, <span class="str">''</span>)
-    <span class="var">provider</span>     = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'provider'</span>, <span class="str">''</span>)
+    <span class="var">tx_type</span>     = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'type'</span>, <span class="str">'incoming'</span>)
     <span class="var">amount</span>       = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'amount'</span>, <span class="str">''</span>)
     <span class="var">sender</span>       = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'sender_number'</span>, <span class="str">''</span>)
     <span class="var">sender_name</span>  = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'sender_name'</span>, <span class="str">''</span>)
     <span class="var">receiver</span>     = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'receiver_number'</span>, <span class="str">''</span>)
     <span class="var">fee</span>          = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'transfer_fee'</span>, <span class="num">0</span>)
-    <span class="var">balance</span>      = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'balance_after'</span>, <span class="str">''</span>)
-    <span class="var">message</span>      = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'message_text'</span>, <span class="str">''</span>)
+    <span class="var">balance</span>      = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'balance_after'</span>, <span class="num">0</span>)
     <span class="var">received_at</span>  = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'received_at'</span>, <span class="str">''</span>)
+    <span class="var">message</span>      = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'message_text'</span>, <span class="str">''</span>)
 
-    <span class="fn">print</span>(<span class="str">f'[SMS Gateway] <span class="op">{</span>tx_type<span class="op">}</span> | <span class="op">{</span>provider<span class="op">}</span> | <span class="op">{</span>sender<span class="op">}</span> -> <span class="op">{</span>receiver<span class="op">}</span> | <span class="op">{</span>amount<span class="op">}</span>'</span>)
+    <span class="kw">if</span> <span class="kw">not</span> <span class="var">amount</span> <span class="kw">or</span> <span class="kw">not</span> <span class="var">sender</span>:
+        <span class="kw">return</span> <span class="fn">jsonify</span>({<span class="str">'error'</span>: <span class="str">'amount and sender_number are required'</span>}), <span class="num">400</span>
 
-    <span class="cm"># حفظ في قاعدة البيانات أو معالجة...</span>
-    <span class="cm"># save_to_database(tx_type, provider, amount, sender, ...)</span>
+    <span class="cm"># حفظ في قاعدة البيانات</span>
+    <span class="cm"># cursor.execute("""INSERT INTO incoming_payments</span>
+    <span class="cm">#     (type, amount, sender_number, sender_name, receiver_number,</span>
+    <span class="cm">#      transfer_fee, balance_after, received_at, message_text)</span>
+    <span class="cm">#     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",</span>
+    <span class="cm">#     (tx_type, amount, sender, sender_name, receiver,</span>
+    <span class="cm">#      fee, balance, received_at, message))</span>
+    <span class="cm"># db.commit()</span>
 
-    <span class="kw">return</span> <span class="fn">jsonify</span>({<span class="str">'success'</span>: <span class="num">True</span>})
+    <span class="fn">print</span>(<span class="str">f'[Webhook] <span class="op">{</span>tx_type<span class="op">}</span> | <span class="op">{</span>sender<span class="op">}</span> -> <span class="op">{</span>receiver<span class="op">}</span> | <span class="op">{</span>amount<span class="op">}</span> EGP'</span>)
+
+    <span class="kw">return</span> <span class="fn">jsonify</span>({<span class="str">'success'</span>: <span class="num">True</span>, <span class="str">'message'</span>: <span class="str">'Payment received'</span>})
 
 <span class="kw">if</span> <span class="var">__name__</span> <span class="op">==</span> <span class="str">'__main__'</span>:
     <span class="var">app</span>.<span class="fn">run</span>(<span class="var">host</span><span class="op">=</span><span class="str">'0.0.0.0'</span>, <span class="var">port</span><span class="op">=</span><span class="num">5000</span>)</pre>
