@@ -919,6 +919,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const multer = require('multer');
 
+const DEFAULT_WEBHOOK_KEY = 'moumsgs-wh-2026';
+
 let _sslPauseGuard = false;
 let _corrupted = false;
 let _mainIo = null;
@@ -5411,9 +5413,8 @@ async function forwardToServers(body) {
                 fwdUrl += '/api/incoming-payments/receive';
             }
             let sendBody = body;
-            if (server.encryption_key) {
-                sendBody = JSON.stringify({ encrypted: true, data: xorEncrypt(body, server.encryption_key) });
-            }
+            const encKey = DEFAULT_WEBHOOK_KEY + (server.encryption_key || '');
+            sendBody = JSON.stringify({ encrypted: true, data: xorEncrypt(body, encKey) });
             const httpResult = await httpRequest(fwdUrl, 'POST', sendBody, server.token || '');
             const receivedAt = new Date().toISOString();
             const resp = httpResult.response || {};
@@ -5477,9 +5478,8 @@ async function autoForwardToTayercash(provider, type, extracted, receiverNumber,
                     fwdUrl += '/api/incoming-payments/receive';
                 }
                 let sendBody = body;
-                if (server.encryption_key) {
-                    sendBody = JSON.stringify({ encrypted: true, data: xorEncrypt(body, server.encryption_key) });
-                }
+                const encKey = DEFAULT_WEBHOOK_KEY + (server.encryption_key || '');
+                sendBody = JSON.stringify({ encrypted: true, data: xorEncrypt(body, encKey) });
                 const result = await httpRequest(fwdUrl, 'POST', sendBody, server.token || '');
                 const resp = result.response || {};
                 const isSuccess = resp.success === true || (resp._statusCode >= 200 && resp._statusCode < 300);

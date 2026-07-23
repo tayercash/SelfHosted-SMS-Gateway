@@ -663,7 +663,7 @@
             <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:6px;font-weight:600;">البيانات المُرسلة (JSON Body):</div>
             <div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:10px;background:rgba(46,199,110,.08);border:1px solid rgba(46,199,110,.2);border-radius:8px;padding:8px 12px;">
                 <i class="fas fa-lock" style="color:#2ec76e;margin-left:4px;"></i>
-                لو مفعل التشفير، البيانات هتتبعت كـ: <code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px;">{ encrypted: true, data: "&lt;base64&gt;" }</code> — المفتاح مش بيتبعث مع الريكوست
+                البيانات بتتبعت متشفرة دايماً via XOR — الطرفين لازم يعرفوا المفتاح: <code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px;">moumsgs-wh-2026</code> + مفتاح المستخدم (لو حطه)
             </div>
             <div class="wh-data-fields">
                 <div class="wh-data-field"><div class="field-name">type</div><div class="field-type">incoming | outgoing</div></div>
@@ -691,7 +691,7 @@
 <span class="kw">const</span> <span class="var">app</span> = <span class="fn">express</span>();
 <span class="var">app</span>.<span class="fn">use</span>(<span class="var">express</span>.<span class="fn">json</span>());
 
-<span class="kw">const</span> <span class="var">ENCRYPTION_KEY</span> = <span class="var">process</span>.<span class="var">env</span>.<span class="var">ENCRYPTION_KEY</span> || <span class="str">'your-shared-secret'</span>;
+<span class="kw">const</span> <span class="var">KEY</span> = <span class="str">'moumsgs-wh-2026'</span> + (<span class="var">process</span>.<span class="var">env</span>.<span class="var">ENCRYPTION_KEY</span> || <span class="str">''</span>);
 
 <span class="kw">function</span> <span class="fn">xorDecrypt</span>(<span class="var">encoded</span>, <span class="var">key</span>) {
   <span class="kw">const</span> <span class="var">buf</span> = <span class="var">Buffer</span>.<span class="fn">from</span>(<span class="var">encoded</span>, <span class="str">'base64'</span>);
@@ -709,7 +709,7 @@
 
     <span class="cm">// فك التشفير لو البيانات مشفرة</span>
     <span class="kw">if</span> (<span class="var">body</span>.<span class="var">encrypted</span> &amp;&amp; <span class="var">body</span>.<span class="var">data</span>) {
-      <span class="kw">const</span> <span class="var">decrypted</span> = <span class="fn">xorDecrypt</span>(<span class="var">body</span>.<span class="var">data</span>, <span class="var">ENCRYPTION_KEY</span>);
+      <span class="kw">const</span> <span class="var">decrypted</span> = <span class="fn">xorDecrypt</span>(<span class="var">body</span>.<span class="var">data</span>, <span class="var">KEY</span>);
       <span class="var">body</span> = <span class="var">JSON</span>.<span class="fn">parse</span>(<span class="var">decrypted</span>);
     }
 
@@ -754,7 +754,7 @@
                 <div class="wh-code-block">
                     <button class="wh-code-copy" onclick="ts_copyCode(this)"><i class="fas fa-copy"></i> Copy</button>
 <pre><span class="op">&lt;?php</span>
-<span class="var">$ENCRYPTION_KEY</span> = <span class="var">getenv</span>(<span class="str">'ENCRYPTION_KEY'</span>) ?: <span class="str">'your-shared-secret'</span>;
+<span class="var">$KEY</span> = <span class="str">'moumsgs-wh-2026'</span> . (<span class="var">getenv</span>(<span class="str">'ENCRYPTION_KEY'</span>) ?: <span class="str">''</span>);
 
 <span class="kw">function</span> <span class="fn">xorDecrypt</span>(<span class="var">$encoded</span>, <span class="var">$key</span>) {
     <span class="var">$data</span> = <span class="var">base64_decode</span>(<span class="var">$encoded</span>);
@@ -770,7 +770,7 @@
 
 <span class="cm">// فك التشفير لو البيانات مشفرة</span>
 <span class="kw">if</span> (!<span class="var">empty</span>(<span class="var">$input</span>[<span class="str">'encrypted'</span>]) &amp;&amp; !<span class="var">empty</span>(<span class="var">$input</span>[<span class="str">'data'</span>])) {
-    <span class="var">$decrypted</span> = <span class="fn">xorDecrypt</span>(<span class="var">$input</span>[<span class="str">'data'</span>], <span class="var">$ENCRYPTION_KEY</span>);
+    <span class="var">$decrypted</span> = <span class="fn">xorDecrypt</span>(<span class="var">$input</span>[<span class="str">'data'</span>], <span class="var">$KEY</span>);
     <span class="var">$input</span> = <span class="var">json_decode</span>(<span class="var">$decrypted</span>, <span class="num">true</span>);
 }
 
@@ -814,7 +814,7 @@
 <span class="kw">from</span> <span class="var">flask</span> <span class="kw">import</span> <span class="var">Flask</span>, <span class="var">request</span>, <span class="var">jsonify</span>
 
 <span class="var">app</span> = <span class="fn">Flask</span>(<span class="var">__name__</span>)
-<span class="var">ENCRYPTION_KEY</span> = <span class="var">os</span>.<span class="var">environ</span>.<span class="fn">get</span>(<span class="str">'ENCRYPTION_KEY'</span>, <span class="str">'your-shared-secret'</span>)
+<span class="var">KEY</span> = <span class="str">'moumsgs-wh-2026'</span> + <span class="var">os</span>.<span class="var">environ</span>.<span class="fn">get</span>(<span class="str">'ENCRYPTION_KEY'</span>, <span class="str">''</span>)
 
 <span class="kw">def</span> <span class="fn">xor_decrypt</span>(<span class="var">encoded</span>, <span class="var">key</span>):
     <span class="var">data</span> = <span class="var">base64</span>.<span class="fn">b64decode</span>(<span class="var">encoded</span>)
@@ -828,7 +828,7 @@
 
     <span class="cm"># فك التشفير لو البيانات مشفرة</span>
     <span class="kw">if</span> <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'encrypted'</span>) <span class="kw">and</span> <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'data'</span>):
-        <span class="var">decrypted</span> = <span class="fn">xor_decrypt</span>(<span class="var">body</span>[<span class="str">'data'</span>], <span class="var">ENCRYPTION_KEY</span>)
+        <span class="var">decrypted</span> = <span class="fn">xor_decrypt</span>(<span class="var">body</span>[<span class="str">'data'</span>], <span class="var">KEY</span>)
         <span class="var">body</span> = <span class="var">json</span>.<span class="fn">loads</span>(<span class="var">decrypted</span>)
 
     <span class="var">tx_type</span>        = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'type'</span>, <span class="str">'incoming'</span>)
