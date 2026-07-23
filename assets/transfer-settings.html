@@ -625,6 +625,10 @@
                     <label data-i18n="transfer.api_token">مفتاح API (اختياري)</label>
                     <input type="text" id="ts-srv-token" placeholder="Bearer token" dir="ltr">
                 </div>
+                <div class="form-group">
+                    <label data-i18n="transfer.encryption_key">مفتاح التشفير XOR (اختياري)</label>
+                    <input type="text" id="ts-srv-encryption-key" placeholder="Shared secret key" dir="ltr">
+                </div>
                 <div class="add-provider-actions">
                     <button class="btn-confirm" onclick="ts_addServer()"><i class="fas fa-check"></i> <span
                             data-i18n="transfer.confirm_add">إضافة</span></button>
@@ -661,6 +665,10 @@
             </div>
 
             <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:6px;font-weight:600;">البيانات المُرسلة (JSON Body):</div>
+            <div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:10px;background:rgba(46,199,110,.08);border:1px solid rgba(46,199,110,.2);border-radius:8px;padding:8px 12px;">
+                <i class="fas fa-lock" style="color:#2ec76e;margin-left:4px;"></i>
+                لو مفعل التشفير، البيانات هتتبعت كـ: <code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px;">{ encrypted: true, data: "&lt;base64&gt;" }</code> — المفتاح مش بيتبعث مع الريكوست
+            </div>
             <div class="wh-data-fields">
                 <div class="wh-data-field"><div class="field-name">type</div><div class="field-type">incoming | outgoing</div></div>
                 <div class="wh-data-field"><div class="field-name">provider</div><div class="field-type">etisalat | vodafone | ...</div></div>
@@ -687,43 +695,47 @@
 <span class="kw">const</span> <span class="var">app</span> = <span class="fn">express</span>();
 <span class="var">app</span>.<span class="fn">use</span>(<span class="var">express</span>.<span class="fn">json</span>());
 
+<span class="kw">const</span> <span class="var">ENCRYPTION_KEY</span> = <span class="var">process</span>.<span class="var">env</span>.<span class="var">ENCRYPTION_KEY</span> || <span class="str">'your-shared-secret'</span>;
+
+<span class="kw">function</span> <span class="fn">xorDecrypt</span>(<span class="var">encoded</span>, <span class="var">key</span>) {
+  <span class="kw">const</span> <span class="var">buf</span> = <span class="var">Buffer</span>.<span class="fn">from</span>(<span class="var">encoded</span>, <span class="str">'base64'</span>);
+  <span class="kw">const</span> <span class="var">keyBuf</span> = <span class="var">Buffer</span>.<span class="fn">from</span>(<span class="var">key</span>, <span class="str">'utf8'</span>);
+  <span class="kw">const</span> <span class="var">out</span> = <span class="var">Buffer</span>.<span class="fn">alloc</span>(<span class="var">buf</span>.<span class="var">length</span>);
+  <span class="kw">for</span> (<span class="kw">let</span> <span class="var">i</span> = <span class="num">0</span>; <span class="var">i</span> &lt; <span class="var">buf</span>.<span class="var">length</span>; <span class="var">i</span>++) {
+    <span class="var">out</span>[<span class="var">i</span>] = <span class="var">buf</span>[<span class="var">i</span>] ^ <span class="var">keyBuf</span>[<span class="var">i</span> % <span class="var">keyBuf</span>.<span class="var">length</span>];
+  }
+  <span class="kw">return</span> <span class="var">out</span>.<span class="fn">toString</span>(<span class="str">'utf8'</span>);
+}
+
 <span class="var">app</span>.<span class="fn">post</span>(<span class="str">'/api/incoming-payments/receive'</span>, <span class="kw">async</span> (<span class="var">req</span>, <span class="var">res</span>) <span class="op">=></span> {
   <span class="kw">try</span> {
+    <span class="kw">let</span> <span class="var">body</span> = <span class="var">req</span>.<span class="var">body</span>;
+
+    <span class="cm">// فك التشفير لو البيانات مشفرة</span>
+    <span class="kw">if</span> (<span class="var">body</span>.<span class="var">encrypted</span> &amp;&amp; <span class="var">body</span>.<span class="var">data</span>) {
+      <span class="kw">const</span> <span class="var">decrypted</span> = <span class="fn">xorDecrypt</span>(<span class="var">body</span>.<span class="var">data</span>, <span class="var">ENCRYPTION_KEY</span>);
+      <span class="var">body</span> = <span class="var">JSON</span>.<span class="fn">parse</span>(<span class="var">decrypted</span>);
+    }
+
     <span class="kw">const</span> {
       <span class="var">type</span>, <span class="var">amount</span>, <span class="var">sender_number</span>, <span class="var">sender_name</span>,
       <span class="var">receiver_number</span>, <span class="var">transfer_fee</span>, <span class="var">balance_after</span>,
       <span class="var">received_at</span>, <span class="var">message_text</span>
-    } = <span class="var">req</span>.<span class="var">body</span>;
+    } = <span class="var">body</span>;
 
     <span class="kw">if</span> (!<span class="var">amount</span> || !<span class="var">sender_number</span>) {
       <span class="kw">return</span> <span class="var">res</span>.<span class="fn">status</span>(<span class="num">400</span>).<span class="fn">json</span>({ <span class="var">error</span>: <span class="str">'amount and sender_number are required'</span> });
     }
 
-    <span class="kw">const</span> <span class="var">payType</span> = (<span class="var">type</span> || <span class="str">'incoming'</span>).<span class="fn">toLowerCase</span>();
-
-    <span class="cm">// حفظ في قاعدة البيانات</span>
-    <span class="cm">// const result = await db.run(</span>
-    <span class="cm">//   `INSERT INTO incoming_payments</span>
-    <span class="cm">//    (type, amount, sender_number, sender_name, receiver_number,</span>
-    <span class="cm">//     transfer_fee, balance_after, received_at, message_text)</span>
-    <span class="cm">//    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,</span>
-    <span class="cm">//   [payType, amount, sender_number, sender_name || '',</span>
-    <span class="cm">//    receiver_number || '', transfer_fee || 0,</span>
-    <span class="cm">//    balance_after || 0, received_at || '', message_text || '']</span>
-    <span class="cm">// );</span>
-
-    <span class="var">console</span>.<span class="fn">log</span>(<span class="str">`<span class="op">${</span>payType<span class="op">}</span> payment: <span class="op">${</span>amount<span class="op">}</span> EGP from <span class="op">${</span>sender_number<span class="op">}</span>`</span>);
+    <span class="var">console</span>.<span class="fn">log</span>(<span class="str">`Payment: ${amount} EGP from ${sender_number}`</span>);
 
     <span class="var">res</span>.<span class="fn">json</span>({ <span class="var">success</span>: <span class="num">true</span>, <span class="var">message</span>: <span class="str">'Payment received'</span> });
   } <span class="kw">catch</span> (<span class="var">err</span>) {
-    <span class="var">console</span>.<span class="fn">error</span>(<span class="str">'Error receiving payment:'</span>, <span class="var">err</span>);
     <span class="var">res</span>.<span class="fn">status</span>(<span class="num">500</span>).<span class="fn">json</span>({ <span class="var">error</span>: <span class="var">err</span>.<span class="var">message</span> });
   }
 });
 
-<span class="var">app</span>.<span class="fn">listen</span>(<span class="num">3000</span>, () <span class="op">=></span> {
-  <span class="var">console</span>.<span class="fn">log</span>(<span class="str">'Server running on port 3000'</span>);
-});</pre>
+<span class="var">app</span>.<span class="fn">listen</span>(<span class="num">3000</span>);</pre>
                 </div>
             </div>
 
@@ -731,38 +743,34 @@
                 <div class="wh-code-block">
                     <button class="wh-code-copy" onclick="ts_copyCode(this)"><i class="fas fa-copy"></i> Copy</button>
 <pre><span class="op">&lt;?php</span>
-<span class="var">$input</span> = <span class="var">json_decode</span>(<span class="fn">file_get_contents</span>(<span class="str">'php://input'</span>), <span class="num">true</span>);
+<span class="var">$ENCRYPTION_KEY</span> = <span class="var">getenv</span>(<span class="str">'ENCRYPTION_KEY'</span>) ?: <span class="str">'your-shared-secret'</span>;
 
-<span class="kw">if</span> (<span class="var">$_SERVER</span>[<span class="str">'REQUEST_METHOD'</span>] <span class="op">!==</span> <span class="str">'POST'</span>) {
-    <span class="var">http_response_code</span>(<span class="num">404</span>);
-    <span class="kw">exit</span>;
+<span class="kw">function</span> <span class="fn">xorDecrypt</span>(<span class="var">$encoded</span>, <span class="var">$key</span>) {
+    <span class="var">$data</span> = <span class="var">base64_decode</span>(<span class="var">$encoded</span>);
+    <span class="var">$keyBuf</span> = <span class="fn">mb_convert_encoding</span>(<span class="var">$key</span>, <span class="str">'UTF-8'</span>);
+    <span class="var">$out</span> = <span class="str">''</span>;
+    <span class="kw">for</span> (<span class="var">$i</span> = <span class="num">0</span>; <span class="var">$i</span> &lt; <span class="fn">strlen</span>(<span class="var">$data</span>); <span class="var">$i</span>++) {
+        <span class="var">$out</span> .= <span class="var">chr</span>(<span class="var">ord</span>(<span class="var">$data</span>[<span class="var">$i</span>]) ^ <span class="var">ord</span>(<span class="var">$keyBuf</span>[<span class="var">$i</span> % <span class="fn">strlen</span>(<span class="var">$keyBuf</span>)]));
+    }
+    <span class="kw">return</span> <span class="var">$out</span>;
 }
 
-<span class="var">$type</span>     = <span class="var">$input</span>[<span class="str">'type'</span>]     ?? <span class="str">'incoming'</span>;
+<span class="var">$input</span> = <span class="var">json_decode</span>(<span class="fn">file_get_contents</span>(<span class="str">'php://input'</span>), <span class="num">true</span>);
+
+<span class="cm">// فك التشفير لو البيانات مشفرة</span>
+<span class="kw">if</span> (!<span class="var">empty</span>(<span class="var">$input</span>[<span class="str">'encrypted'</span>]) &amp;&amp; !<span class="var">empty</span>(<span class="var">$input</span>[<span class="str">'data'</span>])) {
+    <span class="var">$decrypted</span> = <span class="fn">xorDecrypt</span>(<span class="var">$input</span>[<span class="str">'data'</span>], <span class="var">$ENCRYPTION_KEY</span>);
+    <span class="var">$input</span> = <span class="var">json_decode</span>(<span class="var">$decrypted</span>, <span class="num">true</span>);
+}
+
 <span class="var">$amount</span>   = <span class="var">$input</span>[<span class="str">'amount'</span>]   ?? <span class="str">''</span>;
-<span class="var">$sender</span>   = <span class="var">$input</span>[<span class="str">'sender_number'</span>]   ?? <span class="str">''</span>;
-<span class="var">$sName</span>    = <span class="var">$input</span>[<span class="str">'sender_name'</span>]    ?? <span class="str">''</span>;
-<span class="var">$receiver</span> = <span class="var">$input</span>[<span class="str">'receiver_number'</span>] ?? <span class="str">''</span>;
-<span class="var">$fee</span>      = <span class="var">$input</span>[<span class="str">'transfer_fee'</span>]  ?? <span class="num">0</span>;
-<span class="var">$balance</span>  = <span class="var">$input</span>[<span class="str">'balance_after'</span>] ?? <span class="num">0</span>;
-<span class="var">$received</span> = <span class="var">$input</span>[<span class="str">'received_at'</span>]  ?? <span class="str">''</span>;
-<span class="var">$message</span>  = <span class="var">$input</span>[<span class="str">'message_text'</span>]  ?? <span class="str">''</span>;
+<span class="var">$sender</span>   = <span class="var">$input</span>[<span class="str">'sender_number'</span>] ?? <span class="str">''</span>;
 
 <span class="kw">if</span> (!<span class="var">$amount</span> || !<span class="var">$sender</span>) {
-    <span class="var">header</span>(<span class="str">'Content-Type: application/json'</span>);
+    <span class="var">http_response_code</span>(<span class="num">400</span>);
     <span class="kw">echo</span> <span class="var">json_encode</span>([<span class="str">'error'</span> <span class="op">=></span> <span class="str">'amount and sender_number are required'</span>]);
     <span class="kw">exit</span>;
 }
-
-<span class="cm">// حفظ في قاعدة البيانات</span>
-<span class="cm">// $stmt = $pdo->prepare("INSERT INTO incoming_payments</span>
-<span class="cm">//   (type, amount, sender_number, sender_name, receiver_number,</span>
-<span class="cm">//    transfer_fee, balance_after, received_at, message_text)</span>
-<span class="cm">//   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");</span>
-<span class="cm">// $stmt->execute([$type, $amount, $sender, $sName, $receiver,</span>
-<span class="cm">//   $fee, $balance, $received, $message]);</span>
-
-<span class="fn">error_log</span>(<span class="str">"[Webhook] <span class="op">$</span>type | <span class="op">$</span>sender -> <span class="op">$</span>receiver | <span class="op">$</span>amount EGP"</span>);
 
 <span class="var">header</span>(<span class="str">'Content-Type: application/json'</span>);
 <span class="kw">echo</span> <span class="var">json_encode</span>([<span class="str">'success'</span> <span class="op">=></span> <span class="num">true</span>, <span class="str">'message'</span> <span class="op">=></span> <span class="str">'Payment received'</span>]);</pre>
@@ -772,42 +780,34 @@
             <div id="wh-python" class="wh-code-panel">
                 <div class="wh-code-block">
                     <button class="wh-code-copy" onclick="ts_copyCode(this)"><i class="fas fa-copy"></i> Copy</button>
-<pre><span class="kw">from</span> <span class="var">flask</span> <span class="kw">import</span> <span class="var">Flask</span>, <span class="var">request</span>, <span class="var">jsonify</span>
+<pre><span class="kw">import</span> <span class="var">os</span>, <span class="var">base64</span>, <span class="var">json</span>
+<span class="kw">from</span> <span class="var">flask</span> <span class="kw">import</span> <span class="var">Flask</span>, <span class="var">request</span>, <span class="var">jsonify</span>
 
 <span class="var">app</span> = <span class="fn">Flask</span>(<span class="var">__name__</span>)
+<span class="var">ENCRYPTION_KEY</span> = <span class="var">os</span>.<span class="var">environ</span>.<span class="fn">get</span>(<span class="str">'ENCRYPTION_KEY'</span>, <span class="str">'your-shared-secret'</span>)
+
+<span class="kw">def</span> <span class="fn">xor_decrypt</span>(<span class="var">encoded</span>, <span class="var">key</span>):
+    <span class="var">data</span> = <span class="var">base64</span>.<span class="fn">b64decode</span>(<span class="var">encoded</span>)
+    <span class="var">key_bytes</span> = <span class="var">key</span>.<span class="fn">encode</span>(<span class="str">'utf-8'</span>)
+    <span class="var">out</span> = <span class="fn">bytes</span>(<span class="var">b</span> ^ <span class="var">key_bytes</span>[<span class="var">i</span> % <span class="fn">len</span>(<span class="var">key_bytes</span>)] <span class="kw">for</span> <span class="var">i</span>, <span class="var">b</span> <span class="kw">in</span> <span class="fn">enumerate</span>(<span class="var">data</span>))
+    <span class="kw">return</span> <span class="var">out</span>.<span class="fn">decode</span>(<span class="str">'utf-8'</span>)
 
 <span class="var">@app</span>.<span class="fn">route</span>(<span class="str">'/api/incoming-payments/receive'</span>, <span class="var">methods</span><span class="op">=</span>[<span class="str">'POST'</span>])
 <span class="kw">def</span> <span class="fn">receive_payment</span>():
-    <span class="var">data</span> = <span class="var">request</span>.<span class="fn">get_json</span>()
+    <span class="var">body</span> = <span class="var">request</span>.<span class="fn">get_json</span>()
 
-    <span class="var">tx_type</span>     = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'type'</span>, <span class="str">'incoming'</span>)
-    <span class="var">amount</span>       = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'amount'</span>, <span class="str">''</span>)
-    <span class="var">sender</span>       = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'sender_number'</span>, <span class="str">''</span>)
-    <span class="var">sender_name</span>  = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'sender_name'</span>, <span class="str">''</span>)
-    <span class="var">receiver</span>     = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'receiver_number'</span>, <span class="str">''</span>)
-    <span class="var">fee</span>          = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'transfer_fee'</span>, <span class="num">0</span>)
-    <span class="var">balance</span>      = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'balance_after'</span>, <span class="num">0</span>)
-    <span class="var">received_at</span>  = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'received_at'</span>, <span class="str">''</span>)
-    <span class="var">message</span>      = <span class="var">data</span>.<span class="fn">get</span>(<span class="str">'message_text'</span>, <span class="str">''</span>)
+    <span class="cm"># فك التشفير لو البيانات مشفرة</span>
+    <span class="kw">if</span> <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'encrypted'</span>) <span class="kw">and</span> <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'data'</span>):
+        <span class="var">decrypted</span> = <span class="fn">xor_decrypt</span>(<span class="var">body</span>[<span class="str">'data'</span>], <span class="var">ENCRYPTION_KEY</span>)
+        <span class="var">body</span> = <span class="var">json</span>.<span class="fn">loads</span>(<span class="var">decrypted</span>)
+
+    <span class="var">amount</span> = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'amount'</span>, <span class="str">''</span>)
+    <span class="var">sender</span> = <span class="var">body</span>.<span class="fn">get</span>(<span class="str">'sender_number'</span>, <span class="str">''</span>)
 
     <span class="kw">if</span> <span class="kw">not</span> <span class="var">amount</span> <span class="kw">or</span> <span class="kw">not</span> <span class="var">sender</span>:
-        <span class="kw">return</span> <span class="fn">jsonify</span>({<span class="str">'error'</span>: <span class="str">'amount and sender_number are required'</span>}), <span class="num">400</span>
+        <span class="kw">return</span> <span class="fn">jsonify</span>({<span class="str">'error'</span>: <span class="str">'amount and sender_number required'</span>}), <span class="num">400</span>
 
-    <span class="cm"># حفظ في قاعدة البيانات</span>
-    <span class="cm"># cursor.execute("""INSERT INTO incoming_payments</span>
-    <span class="cm">#     (type, amount, sender_number, sender_name, receiver_number,</span>
-    <span class="cm">#      transfer_fee, balance_after, received_at, message_text)</span>
-    <span class="cm">#     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",</span>
-    <span class="cm">#     (tx_type, amount, sender, sender_name, receiver,</span>
-    <span class="cm">#      fee, balance, received_at, message))</span>
-    <span class="cm"># db.commit()</span>
-
-    <span class="fn">print</span>(<span class="str">f'[Webhook] <span class="op">{</span>tx_type<span class="op">}</span> | <span class="op">{</span>sender<span class="op">}</span> -> <span class="op">{</span>receiver<span class="op">}</span> | <span class="op">{</span>amount<span class="op">}</span> EGP'</span>)
-
-    <span class="kw">return</span> <span class="fn">jsonify</span>({<span class="str">'success'</span>: <span class="num">True</span>, <span class="str">'message'</span>: <span class="str">'Payment received'</span>})
-
-<span class="kw">if</span> <span class="var">__name__</span> <span class="op">==</span> <span class="str">'__main__'</span>:
-    <span class="var">app</span>.<span class="fn">run</span>(<span class="var">host</span><span class="op">=</span><span class="str">'0.0.0.0'</span>, <span class="var">port</span><span class="op">=</span><span class="num">5000</span>)</pre>
+    <span class="kw">return</span> <span class="fn">jsonify</span>({<span class="str">'success'</span>: <span class="num">True</span>, <span class="str">'message'</span>: <span class="str">'Payment received'</span>})</pre>
                 </div>
             </div>
         </div>
@@ -981,6 +981,7 @@
             document.getElementById('ts-srv-name').value = '';
             document.getElementById('ts-srv-url').value = '';
             document.getElementById('ts-srv-token').value = '';
+            document.getElementById('ts-srv-encryption-key').value = '';
         } else {
             form.classList.add('active');
             document.getElementById('ts-srv-name').focus();
@@ -991,6 +992,7 @@
         var name = document.getElementById('ts-srv-name').value.trim();
         var url = document.getElementById('ts-srv-url').value.trim();
         var token = document.getElementById('ts-srv-token').value.trim();
+        var encryptionKey = document.getElementById('ts-srv-encryption-key').value.trim();
         if (!name || !url) {
             ts_showToast(t('transfer.fill_all_fields') || 'يرجى ملء جميع الحقول', true);
             return;
@@ -999,7 +1001,7 @@
             url: '/api/forward-servers',
             type: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ name: name, url: url, token: token }),
+            data: JSON.stringify({ name: name, url: url, token: token, encryption_key: encryptionKey }),
             success: function (res) {
                 if (res.success) {
                     ts_showToast('✅ ' + (t('transfer.server_added') || 'تمت إضافة السيرفر'));
@@ -1037,7 +1039,7 @@
                 : '<span style="color:#ef4444;">●</span> ' + (t('transfer.server_disabled') || 'متوقف');
             html += '<div class="provider-row" data-id="' + s.id + '">';
             html += '  <div class="provider-info">';
-            html += '    <div class="provider-name">' + ts_escapeHtml(s.name) + '</div>';
+            html += '    <div class="provider-name">' + ts_escapeHtml(s.name) + (s.encryption_key ? ' <span title="XOR Encrypted" style="color:#2ec76e;font-size:0.75rem;"><i class="fas fa-lock"></i></span>' : '') + '</div>';
             html += '    <div class="provider-key">' + ts_escapeHtml(s.url) + '</div>';
             html += '  </div>';
             html += '  <div class="toggle-wrap">';
@@ -1101,6 +1103,7 @@
         document.getElementById('ts-srv-name').value = srv.name || '';
         document.getElementById('ts-srv-url').value = srv.url || '';
         document.getElementById('ts-srv-token').value = srv.token || '';
+        document.getElementById('ts-srv-encryption-key').value = srv.encryption_key || '';
         document.getElementById('ts-srv-name').focus();
 
         var confirmBtn = form.querySelector('.btn-confirm');
@@ -1119,6 +1122,7 @@
         var name = document.getElementById('ts-srv-name').value.trim();
         var url = document.getElementById('ts-srv-url').value.trim();
         var token = document.getElementById('ts-srv-token').value.trim();
+        var encryptionKey = document.getElementById('ts-srv-encryption-key').value.trim();
         if (!name || !url) {
             ts_showToast(t('transfer.fill_all_fields') || 'يرجى ملء جميع الحقول', true);
             return;
@@ -1127,7 +1131,7 @@
             url: '/api/forward-servers/' + id,
             type: 'PUT',
             contentType: 'application/json',
-            data: JSON.stringify({ name: name, url: url, token: token }),
+            data: JSON.stringify({ name: name, url: url, token: token, encryption_key: encryptionKey }),
             success: function (res) {
                 if (res.success) {
                     ts_showToast('✅ ' + (t('transfer.server_updated') || 'تم تعديل السيرفر'));

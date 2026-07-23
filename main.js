@@ -1433,10 +1433,12 @@ const smsProcessingBuffer = {};
             name TEXT NOT NULL,
             url TEXT NOT NULL,
             token TEXT DEFAULT '',
+            encryption_key TEXT DEFAULT '',
             enabled INTEGER DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
+    try { await db.run("ALTER TABLE forward_servers ADD COLUMN encryption_key TEXT DEFAULT ''"); } catch (e) { }
     const fsCount = await db.get("SELECT COUNT(*) as count FROM forward_servers");
     if (fsCount && fsCount.count === 0) {
         const oldUrl = await db.get("SELECT value FROM settings WHERE key = 'tayercash_url'");
@@ -2781,9 +2783,9 @@ app.get("/api/forward-servers", authenticateToken, isAdmin, async (req, res) => 
 
 app.post("/api/forward-servers", authenticateToken, isAdmin, async (req, res) => {
     try {
-        const { name, url, token } = req.body;
+        const { name, url, token, encryption_key } = req.body;
         if (!name || !url) return res.status(400).json({ error: 'name and url are required' });
-        const result = await db.run("INSERT INTO forward_servers (name, url, token) VALUES (?, ?, ?)", [name.trim(), url.trim(), (token || '').trim()]);
+        const result = await db.run("INSERT INTO forward_servers (name, url, token, encryption_key) VALUES (?, ?, ?, ?)", [name.trim(), url.trim(), (token || '').trim(), (encryption_key || '').trim()]);
         res.json({ success: true, id: result.lastID });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -2793,12 +2795,13 @@ app.post("/api/forward-servers", authenticateToken, isAdmin, async (req, res) =>
 app.put("/api/forward-servers/:id", authenticateToken, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, url, token, enabled } = req.body;
+        const { name, url, token, encryption_key, enabled } = req.body;
         const server = await db.get("SELECT * FROM forward_servers WHERE id = ?", [id]);
         if (!server) return res.status(404).json({ error: 'Server not found' });
         if (name !== undefined) await db.run("UPDATE forward_servers SET name = ? WHERE id = ?", [name.trim(), id]);
         if (url !== undefined) await db.run("UPDATE forward_servers SET url = ? WHERE id = ?", [url.trim(), id]);
         if (token !== undefined) await db.run("UPDATE forward_servers SET token = ? WHERE id = ?", [token.trim(), id]);
+        if (encryption_key !== undefined) await db.run("UPDATE forward_servers SET encryption_key = ? WHERE id = ?", [encryption_key.trim(), id]);
         if (enabled !== undefined) await db.run("UPDATE forward_servers SET enabled = ? WHERE id = ?", [enabled ? 1 : 0, id]);
         res.json({ success: true });
     } catch (err) {
@@ -5407,7 +5410,11 @@ async function forwardToServers(body) {
             if (!fwdUrl.endsWith('/api/incoming-payments/receive')) {
                 fwdUrl += '/api/incoming-payments/receive';
             }
-            const httpResult = await httpRequest(fwdUrl, 'POST', body, server.token || '');
+            let sendBody = body;
+            if (server.encryption_key) {
+                sendBody = JSON.stringify({ encrypted: true, data: xorEncrypt(body, server.encryption_key) });
+            }
+            const httpResult = await httpRequest(fwdUrl, 'POST', sendBody, server.token || '');
             const receivedAt = new Date().toISOString();
             const resp = httpResult.response || {};
             const isSuccess = resp.success === true || (resp._statusCode >= 200 && resp._statusCode < 300);
@@ -5469,7 +5476,11 @@ async function autoForwardToTayercash(provider, type, extracted, receiverNumber,
                 if (!fwdUrl.endsWith('/api/incoming-payments/receive')) {
                     fwdUrl += '/api/incoming-payments/receive';
                 }
-                const result = await httpRequest(fwdUrl, 'POST', body, server.token || '');
+                let sendBody = body;
+                if (server.encryption_key) {
+                    sendBody = JSON.stringify({ encrypted: true, data: xorEncrypt(body, server.encryption_key) });
+                }
+                const result = await httpRequest(fwdUrl, 'POST', sendBody, server.token || '');
                 const resp = result.response || {};
                 const isSuccess = resp.success === true || (resp._statusCode >= 200 && resp._statusCode < 300);
                 if (isSuccess) {
@@ -5489,6 +5500,26 @@ async function autoForwardToTayercash(provider, type, extracted, receiverNumber,
     } catch (err) {
         console.warn(`[!] Failed to forward to external server: ${err.message}`);
     }
+}
+
+function xorEncrypt(text, key) {
+    const buf = Buffer.from(text, 'utf8');
+    const keyBuf = Buffer.from(key, 'utf8');
+    const out = Buffer.alloc(buf.length);
+    for (let i = 0; i < buf.length; i++) {
+        out[i] = buf[i] ^ keyBuf[i % keyBuf.length];
+    }
+    return out.toString('base64');
+}
+
+function xorDecrypt(encoded, key) {
+    const buf = Buffer.from(encoded, 'base64');
+    const keyBuf = Buffer.from(key, 'utf8');
+    const out = Buffer.alloc(buf.length);
+    for (let i = 0; i < buf.length; i++) {
+        out[i] = buf[i] ^ keyBuf[i % keyBuf.length];
+    }
+    return out.toString('utf8');
 }
 
 function httpRequest(url, method, body, authToken) {

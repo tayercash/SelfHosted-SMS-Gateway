@@ -334,6 +334,7 @@
   "transfer.provider_deleted": "تم حذف المزود",
   "transfer.provider_added": "تمت إضافة المزود",
   "transfer.fill_all_fields": "يرجى ملء جميع الحقول",
+  "transfer.encryption_key": "مفتاح التشفير XOR (اختياري)",
   "transactions.title": "جميع الإيداعات",
   "transactions.app_name": "SMS Gateway",
   "transactions.filter_all": "الكل",

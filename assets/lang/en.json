@@ -382,6 +382,7 @@
   "transfer.provider_deleted": "Provider deleted",
   "transfer.provider_added": "Provider added",
   "transfer.fill_all_fields": "Please fill all fields",
+  "transfer.encryption_key": "XOR Encryption Key (optional)",
   "transactions.title": "All Deposits",
   "transactions.app_name": "SMS Gateway",
   "transactions.filter_all": "All",
