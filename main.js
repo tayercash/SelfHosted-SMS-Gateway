@@ -1035,6 +1035,10 @@ function normalizePhoneNumber(num) {
 // كائن لتخزين المستخدمين المتصلين (ID المستخدم مقابل بياناته)
 let onlineUsers = {};
 
+let _cachedPlanLimits = null;
+let _planLimitsCacheTime = 0;
+const PLAN_LIMITS_CACHE_TTL = 60000;
+
 let db;
 
 function getDatabasePath() {
@@ -3065,6 +3069,68 @@ app.get("/api/license-info", authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
+app.get("/api/license-limits", authenticateToken, async (req, res) => {
+    try {
+        const now = Date.now();
+        if (!_cachedPlanLimits || (now - _planLimitsCacheTime) > PLAN_LIMITS_CACHE_TTL) {
+            if (!_currentKey) {
+                _cachedPlanLimits = { max_projects: 0, max_licenses: 0, plan_name: 'Unknown' };
+                _planLimitsCacheTime = now;
+            } else {
+                try {
+                    const https2 = require('https');
+                    const http2 = require('http');
+                    const url = new URL(_SERVER_URL + '/license-info.php');
+                    const transport = url.protocol === 'https:' ? https2 : http2;
+                    const postData = JSON.stringify({ license_key: _currentKey });
+                    const result = await new Promise((resolve, reject) => {
+                        const r = transport.request({
+                            hostname: url.hostname,
+                            port: url.port || (url.protocol === 'https:' ? 443 : 80),
+                            path: url.pathname,
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) },
+                            timeout: 8000,
+                        }, (res2) => {
+                            let d = '';
+                            res2.on('data', (c) => { d += c; });
+                            res2.on('end', () => { try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
+                        });
+                        r.on('error', () => resolve(null));
+                        r.on('timeout', () => { r.destroy(); resolve(null); });
+                        r.write(postData);
+                        r.end();
+                    });
+                    if (result && result.success && result.plan) {
+                        _cachedPlanLimits = {
+                            max_projects: result.plan.max_projects || 0,
+                            max_licenses: result.plan.max_licenses || 0,
+                            plan_name: result.plan.name || 'Unknown',
+                        };
+                        _planLimitsCacheTime = now;
+                    }
+                } catch (_) {}
+            }
+        }
+
+        const connectedClients = Object.keys(phoneSockets).length;
+        const connectedGateways = 1;
+        const onlineCount = Object.keys(onlineUsers).length;
+
+        res.json({
+            success: true,
+            limits: _cachedPlanLimits || { max_projects: 0, max_licenses: 0, plan_name: 'Unknown' },
+            usage: {
+                clients: connectedClients,
+                gateways: connectedGateways,
+                online_users: onlineCount,
+            },
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get("/api/noip/diagnose", authenticateToken, isAdmin, async (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.set('Pragma', 'no-cache');
@@ -4438,6 +4504,23 @@ function setupConnectionHandler(socket) {
                 phoneSockets[socket.id] = { phoneNumber, simSlots: [], modemPaths: [], deviceId: deviceId || "unknown", deviceName: deviceName || "unknown", androidVersion: androidVersion || "unknown", simPhoneNumbers: [] };
                 broadcastModemList();
                 console.log(`[Phone] Phone unregistered (no SIMs): ${phoneNumber} (${socket.id})`);
+                return;
+            }
+
+            const isReconnect = Object.entries(phoneSockets).some(([sid, p]) => p.phoneNumber === phoneNumber && sid !== socket.id);
+            const normalizedCurrent = normalizePhoneNumber(phoneNumber);
+            const uniquePhoneCount = new Set(
+                Object.entries(phoneSockets)
+                    .filter(([sid, p]) => sid !== socket.id && (!normalizedCurrent || normalizePhoneNumber(p.phoneNumber) !== normalizedCurrent))
+                    .map(([_, p]) => p.phoneNumber)
+            ).size;
+            const alreadyRegistered = normalizedCurrent && Object.values(phoneSockets).some(p => normalizePhoneNumber(p.phoneNumber) === normalizedCurrent && p.simSlots.length > 0);
+            const effectiveCount = alreadyRegistered ? uniquePhoneCount : uniquePhoneCount + 1;
+            const maxLic = _cachedPlanLimits ? _cachedPlanLimits.max_licenses : 0;
+            if (maxLic > 0 && effectiveCount > maxLic) {
+                console.log(`[License] Phone rejected: ${phoneNumber} — max ${maxLic} clients reached (${effectiveCount} attempted)`);
+                socket.emit("license-limit-reached", { max: maxLic, current: effectiveCount });
+                socket.disconnect(true);
                 return;
             }
 

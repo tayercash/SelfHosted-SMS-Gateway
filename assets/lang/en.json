@@ -169,6 +169,8 @@
   "modems.copied": "Copied ✓",
   "modems.copy_btn": "Copy",
   "modems.sims_label": "Lines",
+  "modems.limit_gateways": "Gateways",
+  "modems.limit_clients": "Clients",
   "messages.all": "All",
   "messages.sender_name": "Sender Name",
   "messages.delete_chat": "Delete Conversation",

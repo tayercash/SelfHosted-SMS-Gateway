@@ -166,6 +166,8 @@
   "modems.copied": "تم النسخ ✓",
   "modems.copy_btn": "نسخ",
   "modems.sims_label": "الخطوط",
+  "modems.limit_gateways": "البوابات",
+  "modems.limit_clients": "العملاء",
   "messages.all": "الكل",
   "messages.sender_name": "اسم المرسل",
   "messages.delete_chat": "حذف المحادثة",
