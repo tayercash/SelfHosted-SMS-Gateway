@@ -5321,42 +5321,38 @@ async function autoExecuteWalletOperation(walletNum, provider, type, amount, fee
             return;
         }
 
-        await db.run('BEGIN TRANSACTION');
-        try {
-            const cardResult = await db.get('SELECT balance FROM wallets WHERE id = ?', [cardId]);
-            const currentBalance = parseFloat(cardResult?.balance) || 0;
+        const cardResult = await db.get('SELECT balance FROM wallets WHERE id = ?', [cardId]);
+        const currentBalance = parseFloat(cardResult?.balance) || 0;
 
-            let newBalance;
-            if (type === 'incoming') {
-                newBalance = currentBalance + numAmount;
-            } else {
-                if (currentBalance < numAmount) { await db.run('ROLLBACK'); return; }
-                newBalance = currentBalance - numAmount;
-            }
+        let newBalance;
+        if (type === 'incoming') {
+            newBalance = currentBalance + numAmount;
+        } else {
+            if (currentBalance < numAmount) return;
+            newBalance = currentBalance - numAmount;
+        }
 
-            await db.run('UPDATE wallets SET balance = ? WHERE id = ?', [newBalance, cardId]);
-            const txResult = await db.run(
-                `INSERT INTO wallet_transactions (card_id, user_id, transaction_type, note, price, adjustment_id, adjustment_type, adjustment_value, original_price, receipt_image, source_table, source_tx_id) VALUES (?, ?, ?, ?, ?, NULL, NULL, 0, ?, NULL, ?, ?)`,
-                [cardId, 0, txType, `Auto: ${provider} ${txLabel} ${numAmount} EGP`, numAmount, numAmount, sourceTable || null, sourceTxId || null]
-            );
+        await db.run('UPDATE wallets SET balance = ? WHERE id = ?', [newBalance, cardId]);
+        const txResult = await db.run(
+            `INSERT INTO wallet_transactions (card_id, user_id, transaction_type, note, price, adjustment_id, adjustment_type, adjustment_value, original_price, receipt_image, source_table, source_tx_id) VALUES (?, ?, ?, ?, ?, NULL, NULL, 0, ?, NULL, ?, ?)`,
+            [cardId, 0, txType, `Auto: ${provider} ${txLabel} ${numAmount} EGP`, numAmount, numAmount, sourceTable || null, sourceTxId || null]
+        );
 
-            const walletMerchant = await db.get('SELECT merchant_id FROM wallets WHERE id = ?', [cardId]);
-            if (walletMerchant && walletMerchant.merchant_id) {
-                const mDiff = type === 'incoming' ? numAmount : -numAmount;
-                await db.run('UPDATE merchants SET balance = balance + ? WHERE id = ?', [mDiff, walletMerchant.merchant_id]);
-                const merchant = await db.get('SELECT * FROM merchants WHERE id = ?', [walletMerchant.merchant_id]);
-                if (merchant) io.emit('merchant_updated', merchant);
-            }
+        const walletMerchant = await db.get('SELECT merchant_id FROM wallets WHERE id = ?', [cardId]);
+        if (walletMerchant && walletMerchant.merchant_id) {
+            const mDiff = type === 'incoming' ? numAmount : -numAmount;
+            await db.run('UPDATE merchants SET balance = balance + ? WHERE id = ?', [mDiff, walletMerchant.merchant_id]);
+            const merchant = await db.get('SELECT * FROM merchants WHERE id = ?', [walletMerchant.merchant_id]);
+            if (merchant) io.emit('merchant_updated', merchant);
+        }
 
-            await db.run('COMMIT');
-            const limits2 = await db.get(`
-                SELECT (daily_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = ? AND transaction_type IN ('pay', 'withdraw') AND DATE(created_at) = DATE('now')), 0)) as remaining_daily,
-                       (Monthly_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = ? AND transaction_type IN ('pay', 'withdraw') AND strftime('%Y-%m', DATE(created_at)) = strftime('%Y-%m', 'now')), 0)) as remaining_monthly
-                FROM wallets WHERE id = ?
-            `, [cardId, cardId, cardId]);
-            if (io) io.emit('wallet_transaction_added', { transaction: { id: txResult.lastID, card_id: cardId, user_id: 0, transaction_type: txType, note: `Auto: ${provider} ${txLabel} ${numAmount} EGP`, price: numAmount, created_at: new Date().toISOString() }, new_balance: newBalance, new_daily_remaining: limits2 ? limits2.remaining_daily : 0, new_monthly_remaining: limits2 ? limits2.remaining_monthly : 0 });
-            console.log(`[Money] Auto wallet ${txLabel}: ${type === 'incoming' ? '+' : '-'}${numAmount} EGP ${type === 'incoming' ? 'to' : 'from'} wallet #${cardId} (${walletNum})`);
-        } catch (e) { await db.run('ROLLBACK'); }
+        const limits2 = await db.get(`
+            SELECT (daily_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = ? AND transaction_type IN ('pay', 'withdraw') AND DATE(created_at) = DATE('now')), 0)) as remaining_daily,
+                   (Monthly_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = ? AND transaction_type IN ('pay', 'withdraw') AND strftime('%Y-%m', DATE(created_at)) = strftime('%Y-%m', 'now')), 0)) as remaining_monthly
+            FROM wallets WHERE id = ?
+        `, [cardId, cardId, cardId]);
+        if (io) io.emit('wallet_transaction_added', { transaction: { id: txResult.lastID, card_id: cardId, user_id: 0, transaction_type: txType, note: `Auto: ${provider} ${txLabel} ${numAmount} EGP`, price: numAmount, created_at: new Date().toISOString() }, new_balance: newBalance, new_daily_remaining: limits2 ? limits2.remaining_daily : 0, new_monthly_remaining: limits2 ? limits2.remaining_monthly : 0 });
+        console.log(`[Money] Auto wallet ${txLabel}: ${type === 'incoming' ? '+' : '-'}${numAmount} EGP ${type === 'incoming' ? 'to' : 'from'} wallet #${cardId} (${walletNum})`);
     } catch (e) { }
 }
 
@@ -6084,60 +6080,52 @@ app.post('/add_wallet_balance', authenticateToken, async (req, res) => {
             return res.status(400).json({ success: false, error: 'Amount must be > 0' });
         }
 
-        await db.run('BEGIN TRANSACTION');
-        try {
-            const cardResult = await db.get('SELECT balance FROM wallets WHERE id = ?', [card_id]);
-            if (!cardResult) {
-                await db.run('ROLLBACK');
-                return res.status(404).json({ success: false, error: 'Wallet not found' });
-            }
-            const currentBalance = normalizeNumber(cardResult.balance) || 0;
-            const newBalance = currentBalance + transactionAmount;
-            await db.run('UPDATE wallets SET balance = ? WHERE id = ?', [newBalance, card_id]);
-
-            const walletData = await db.get('SELECT merchant_id FROM wallets WHERE id = ?', [card_id]);
-            if (walletData && walletData.merchant_id) {
-                const merchantId = walletData.merchant_id;
-                await db.run('UPDATE merchants SET balance = balance + ? WHERE id = ?', [transactionAmount, merchantId]);
-                await db.run('INSERT INTO merchant_transactions (merchant_id, user_id, transaction_type, note, amount) VALUES (?, ?, ?, ?, ?)',
-                    [merchantId, req.user.id, 'wallet_sync', 'Deposit from wallet: ' + card_id + ' | ' + (note || ''), transactionAmount]);
-                const merchant = await db.get('SELECT * FROM merchants WHERE id = ?', [merchantId]);
-                io.emit('merchant_updated', merchant);
-            }
-
-            const result = await db.run(
-                `INSERT INTO wallet_transactions (card_id, user_id, transaction_type, note, price) VALUES (?, ?, 'add_money', ?, ?)`,
-                [card_id, req.user.id, note || '', transactionAmount]
-            );
-            await db.run('COMMIT');
-
-            const transactionData = {
-                id: result.lastID, card_id: parseInt(card_id), user_id: req.user.id,
-                transaction_type: 'add_money', note: note || '', price: transactionAmount,
-                created_at: new Date().toISOString(), username: req.user.username
-            };
-
-            const limits = await db.get(`
-                SELECT (daily_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = ? AND transaction_type IN ('pay', 'withdraw') AND DATE(created_at) = DATE('now')), 0)) as remaining_daily,
-                       (Monthly_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = ? AND transaction_type IN ('pay', 'withdraw') AND strftime('%Y-%m', DATE(created_at)) = strftime('%Y-%m', 'now')), 0)) as remaining_monthly
-                FROM wallets WHERE id = ?
-            `, [card_id, card_id, card_id]);
-
-            io.emit('wallet_transaction_added', {
-                transaction: transactionData,
-                new_balance: newBalance,
-                new_daily_remaining: limits ? limits.remaining_daily : 0,
-                new_monthly_remaining: limits ? limits.remaining_monthly : 0
-            });
-
-            return res.json({
-                success: true, message: "Balance added successfully",
-                transaction: transactionData, new_balance: newBalance
-            });
-        } catch (innerErr) {
-            await db.run('ROLLBACK');
-            throw innerErr;
+        const cardResult = await db.get('SELECT balance FROM wallets WHERE id = ?', [card_id]);
+        if (!cardResult) {
+            return res.status(404).json({ success: false, error: 'Wallet not found' });
         }
+        const currentBalance = normalizeNumber(cardResult.balance) || 0;
+        const newBalance = currentBalance + transactionAmount;
+        await db.run('UPDATE wallets SET balance = ? WHERE id = ?', [newBalance, card_id]);
+
+        const walletData = await db.get('SELECT merchant_id FROM wallets WHERE id = ?', [card_id]);
+        if (walletData && walletData.merchant_id) {
+            const merchantId = walletData.merchant_id;
+            await db.run('UPDATE merchants SET balance = balance + ? WHERE id = ?', [transactionAmount, merchantId]);
+            await db.run('INSERT INTO merchant_transactions (merchant_id, user_id, transaction_type, note, amount) VALUES (?, ?, ?, ?, ?)',
+                [merchantId, req.user.id, 'wallet_sync', 'Deposit from wallet: ' + card_id + ' | ' + (note || ''), transactionAmount]);
+            const merchant = await db.get('SELECT * FROM merchants WHERE id = ?', [merchantId]);
+            io.emit('merchant_updated', merchant);
+        }
+
+        const result = await db.run(
+            `INSERT INTO wallet_transactions (card_id, user_id, transaction_type, note, price) VALUES (?, ?, 'add_money', ?, ?)`,
+            [card_id, req.user.id, note || '', transactionAmount]
+        );
+
+        const transactionData = {
+            id: result.lastID, card_id: parseInt(card_id), user_id: req.user.id,
+            transaction_type: 'add_money', note: note || '', price: transactionAmount,
+            created_at: new Date().toISOString(), username: req.user.username
+        };
+
+        const limits = await db.get(`
+            SELECT (daily_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = ? AND transaction_type IN ('pay', 'withdraw') AND DATE(created_at) = DATE('now')), 0)) as remaining_daily,
+                   (Monthly_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = ? AND transaction_type IN ('pay', 'withdraw') AND strftime('%Y-%m', DATE(created_at)) = strftime('%Y-%m', 'now')), 0)) as remaining_monthly
+            FROM wallets WHERE id = ?
+        `, [card_id, card_id, card_id]);
+
+        io.emit('wallet_transaction_added', {
+            transaction: transactionData,
+            new_balance: newBalance,
+            new_daily_remaining: limits ? limits.remaining_daily : 0,
+            new_monthly_remaining: limits ? limits.remaining_monthly : 0
+        });
+
+        return res.json({
+            success: true, message: "Balance added successfully",
+            transaction: transactionData, new_balance: newBalance
+        });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
@@ -6203,83 +6191,72 @@ app.post('/wallet_transaction', authenticateToken, async (req, res) => {
             return res.status(400).json({ success: false, error: 'Price must be > 0' });
         }
 
-        await db.run('BEGIN TRANSACTION');
-        try {
-            const card = await db.get(`
-                SELECT w.name, w.balance, w.daily_limit, w.Monthly_limit,
-                       (w.daily_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = w.id AND transaction_type IN ('pay', 'withdraw') AND DATE(created_at) = DATE('now')), 0)) AS remaining_daily,
-                       (w.Monthly_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = w.id AND transaction_type IN ('pay', 'withdraw') AND strftime('%Y-%m', DATE(created_at)) = strftime('%Y-%m', 'now')), 0)) AS remaining_monthly
-                FROM wallets w WHERE w.id = ?
-            `, [card_id]);
+        const card = await db.get(`
+            SELECT w.name, w.balance, w.daily_limit, w.Monthly_limit,
+                   (w.daily_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = w.id AND transaction_type IN ('pay', 'withdraw') AND DATE(created_at) = DATE('now')), 0)) AS remaining_daily,
+                   (w.Monthly_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = w.id AND transaction_type IN ('pay', 'withdraw') AND strftime('%Y-%m', DATE(created_at)) = strftime('%Y-%m', 'now')), 0)) AS remaining_monthly
+            FROM wallets w WHERE w.id = ?
+        `, [card_id]);
 
-            if (!card) {
-                await db.run('ROLLBACK');
-                return res.status(404).json({ success: false, error: 'Wallet not found' });
-            }
-
-            const currentBalance = normalizeNumber(card.balance) || 0;
-            const remainingDailyBefore = normalizeNumber(card.remaining_daily);
-            const remainingMonthlyBefore = normalizeNumber(card.remaining_monthly);
-
-            if (transactionAmount > currentBalance) {
-                await db.run('ROLLBACK');
-                return res.status(400).json({ success: false, error: 'Insufficient balance. Balance: ' + currentBalance.toFixed(2) });
-            }
-            if (transactionAmount > remainingDailyBefore) {
-                await db.run('ROLLBACK');
-                return res.status(400).json({ success: false, error: 'Daily limit exceeded. Remaining: ' + remainingDailyBefore.toFixed(2) });
-            }
-            if (transactionAmount > remainingMonthlyBefore) {
-                await db.run('ROLLBACK');
-                return res.status(400).json({ success: false, error: 'Monthly limit exceeded. Remaining: ' + remainingMonthlyBefore.toFixed(2) });
-            }
-
-            const newBalance = currentBalance - transactionAmount;
-            await db.run('UPDATE wallets SET balance = ? WHERE id = ?', [newBalance, card_id]);
-
-            const walletData = await db.get('SELECT merchant_id FROM wallets WHERE id = ?', [card_id]);
-            if (walletData && walletData.merchant_id) {
-                const merchantId = walletData.merchant_id;
-                await db.run('UPDATE merchants SET balance = balance - ? WHERE id = ?', [transactionAmount, merchantId]);
-                await db.run('INSERT INTO merchant_transactions (merchant_id, user_id, transaction_type, note, amount) VALUES (?, ?, ?, ?, ?)',
-                    [merchantId, req.user.id, 'wallet_sync', 'Withdrawal from wallet: ' + card_id + ' | ' + (note || ''), -transactionAmount]);
-                const merchant = await db.get('SELECT * FROM merchants WHERE id = ?', [merchantId]);
-                io.emit('merchant_updated', merchant);
-            }
-
-            const result = await db.run(
-                `INSERT INTO wallet_transactions (card_id, user_id, transaction_type, note, price) VALUES (?, ?, 'pay', ?, ?)`,
-                [card_id, req.user.id, note || '', transactionAmount]
-            );
-            await db.run('COMMIT');
-
-            const transactionData = {
-                id: result.lastID, card_id: parseInt(card_id), user_id: req.user.id,
-                transaction_type: 'pay', note: note || '', price: transactionAmount,
-                created_at: new Date().toISOString(), username: req.user.username
-            };
-
-            const limits = await db.get(`
-                SELECT (daily_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = ? AND transaction_type IN ('pay', 'withdraw') AND DATE(created_at) = DATE('now')), 0)) as remaining_daily,
-                       (Monthly_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = ? AND transaction_type IN ('pay', 'withdraw') AND strftime('%Y-%m', DATE(created_at)) = strftime('%Y-%m', 'now')), 0)) as remaining_monthly
-                FROM wallets WHERE id = ?
-            `, [card_id, card_id, card_id]);
-
-            io.emit('wallet_transaction_added', {
-                transaction: transactionData,
-                new_balance: newBalance,
-                new_daily_remaining: limits ? limits.remaining_daily : 0,
-                new_monthly_remaining: limits ? limits.remaining_monthly : 0
-            });
-
-            return res.json({
-                success: true, message: "Payment processed successfully",
-                transaction: transactionData, new_balance: newBalance
-            });
-        } catch (innerErr) {
-            await db.run('ROLLBACK');
-            throw innerErr;
+        if (!card) {
+            return res.status(404).json({ success: false, error: 'Wallet not found' });
         }
+
+        const currentBalance = normalizeNumber(card.balance) || 0;
+        const remainingDailyBefore = normalizeNumber(card.remaining_daily);
+        const remainingMonthlyBefore = normalizeNumber(card.remaining_monthly);
+
+        if (transactionAmount > currentBalance) {
+            return res.status(400).json({ success: false, error: 'Insufficient balance. Balance: ' + currentBalance.toFixed(2) });
+        }
+        if (transactionAmount > remainingDailyBefore) {
+            return res.status(400).json({ success: false, error: 'Daily limit exceeded. Remaining: ' + remainingDailyBefore.toFixed(2) });
+        }
+        if (transactionAmount > remainingMonthlyBefore) {
+            return res.status(400).json({ success: false, error: 'Monthly limit exceeded. Remaining: ' + remainingMonthlyBefore.toFixed(2) });
+        }
+
+        const newBalance = currentBalance - transactionAmount;
+        await db.run('UPDATE wallets SET balance = ? WHERE id = ?', [newBalance, card_id]);
+
+        const walletData = await db.get('SELECT merchant_id FROM wallets WHERE id = ?', [card_id]);
+        if (walletData && walletData.merchant_id) {
+            const merchantId = walletData.merchant_id;
+            await db.run('UPDATE merchants SET balance = balance - ? WHERE id = ?', [transactionAmount, merchantId]);
+            await db.run('INSERT INTO merchant_transactions (merchant_id, user_id, transaction_type, note, amount) VALUES (?, ?, ?, ?, ?)',
+                [merchantId, req.user.id, 'wallet_sync', 'Withdrawal from wallet: ' + card_id + ' | ' + (note || ''), -transactionAmount]);
+            const merchant = await db.get('SELECT * FROM merchants WHERE id = ?', [merchantId]);
+            io.emit('merchant_updated', merchant);
+        }
+
+        const result = await db.run(
+            `INSERT INTO wallet_transactions (card_id, user_id, transaction_type, note, price) VALUES (?, ?, 'pay', ?, ?)`,
+            [card_id, req.user.id, note || '', transactionAmount]
+        );
+
+        const transactionData = {
+            id: result.lastID, card_id: parseInt(card_id), user_id: req.user.id,
+            transaction_type: 'pay', note: note || '', price: transactionAmount,
+            created_at: new Date().toISOString(), username: req.user.username
+        };
+
+        const limits = await db.get(`
+            SELECT (daily_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = ? AND transaction_type IN ('pay', 'withdraw') AND DATE(created_at) = DATE('now')), 0)) as remaining_daily,
+                   (Monthly_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = ? AND transaction_type IN ('pay', 'withdraw') AND strftime('%Y-%m', DATE(created_at)) = strftime('%Y-%m', 'now')), 0)) as remaining_monthly
+            FROM wallets WHERE id = ?
+        `, [card_id, card_id, card_id]);
+
+        io.emit('wallet_transaction_added', {
+            transaction: transactionData,
+            new_balance: newBalance,
+            new_daily_remaining: limits ? limits.remaining_daily : 0,
+            new_monthly_remaining: limits ? limits.remaining_monthly : 0
+        });
+
+        return res.json({
+            success: true, message: "Payment processed successfully",
+            transaction: transactionData, new_balance: newBalance
+        });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
@@ -6336,7 +6313,6 @@ app.post('/import_wallets', authenticateToken, isAdmin, async (req, res) => {
     if (!Array.isArray(wallets) || wallets.length === 0) {
         return res.status(400).json({ success: false, error: 'Invalid data' });
     }
-    await db.run('BEGIN TRANSACTION');
     try {
         let inserted = 0, updated = 0;
         for (const item of wallets) {
@@ -6359,11 +6335,9 @@ app.post('/import_wallets', authenticateToken, isAdmin, async (req, res) => {
                 inserted++;
             }
         }
-        await db.run('COMMIT');
         io.emit('wallet_updated');
         res.json({ success: true, inserted, updated });
     } catch (err) {
-        await db.run('ROLLBACK');
         console.error('Import wallets error:', err.message);
         res.status(500).json({ success: false, error: 'Database error during import' });
     }
@@ -6434,19 +6408,14 @@ app.post('/adjust_merchant_balance', authenticateToken, async (req, res) => {
         if (!merchant_id || !amount) return res.status(400).json({ success: false, error: 'Missing data' });
         const adjustAmount = normalizeNumber(amount);
         if (!Number.isFinite(adjustAmount)) return res.status(400).json({ success: false, error: 'Invalid amount' });
-        await db.run('BEGIN TRANSACTION');
-        try {
-            await db.run('UPDATE merchants SET balance = ROUND(balance + ?, 2) WHERE id = ?', [adjustAmount, merchant_id]);
-            await db.run('INSERT INTO merchant_transactions (merchant_id, user_id, transaction_type, note, amount) VALUES (?, ?, ?, ?, ?)',
-                [merchant_id, req.user.id, 'manual_adjustment', note || 'Manual adjustment', adjustAmount]);
-            await db.run('COMMIT');
-            const updated = await db.get('SELECT * FROM merchants WHERE id=?', [merchant_id]);
-            io.emit('merchant_updated', updated);
-            res.json({ success: true, message: 'Balance adjusted', new_balance: updated.balance });
-        } catch (err) {
-            await db.run('ROLLBACK');
-            throw err;
-        }
+
+        await db.run('UPDATE merchants SET balance = ROUND(balance + ?, 2) WHERE id = ?', [adjustAmount, merchant_id]);
+        await db.run('INSERT INTO merchant_transactions (merchant_id, user_id, transaction_type, note, amount) VALUES (?, ?, ?, ?, ?)',
+            [merchant_id, req.user.id, 'manual_adjustment', note || 'Manual adjustment', adjustAmount]);
+
+        const updated = await db.get('SELECT * FROM merchants WHERE id=?', [merchant_id]);
+        io.emit('merchant_updated', updated);
+        res.json({ success: true, message: 'Balance adjusted', new_balance: updated.balance });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, error: err.message });
