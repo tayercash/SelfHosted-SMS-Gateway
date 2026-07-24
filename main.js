@@ -4043,11 +4043,12 @@ app.post("/api/transactions/delete-all", authenticateToken, isAdmin, async (req,
 });
 app.post("/api/test-outgoing", async (req, res) => {
     try {
-        const { message, sender, receiver } = req.body;
+        const { message, sender, receiver, simSlot, timestamp } = req.body;
         if (!message) return res.status(400).json({ error: 'Message text required' });
         const senderNum = sender || '01000000000';
         const receiverNum = receiver || '01000000000';
-        const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+        const slot = parseInt(simSlot) || 0;
+        const now = normalizeTimestampDigits(timestamp || new Date().toISOString().replace('T', ' ').split('.')[0]);
 
         // كشف نوع المعاملة قبل الحفظ
         const txType1 = await detectTransactionType(senderNum, message);
@@ -4059,16 +4060,50 @@ app.post("/api/test-outgoing", async (req, res) => {
             sender: senderNum,
             content: message,
             timestamp: now,
-            msgIndex: Math.floor(Math.random() * 999) + 1,
-            simSlot: 0,
+            msgIndex: Math.floor(Math.random() * 9999) + 1,
+            simSlot: slot,
             type: 'sms',
             transactionType: txType1?.type || null
         });
 
         // معالجة الدفع والتحويل لو الرسالة مطابقة (باستخدام القواعد الديناميكية)
-        await processMessageWithRules(receiverNum, senderNum, message, now);
+        const txDetails = await processMessageWithRules(receiverNum, senderNum, message, now);
 
-        res.json({ success: true, message: 'تم محاكاة استلام الرسالة بنجاح' });
+        // إرسال تنبيه المعاملة
+        if (txType1 || txDetails) {
+            try {
+                const alertPayload = {
+                    transactionType: txType1?.type || txDetails?.type || null,
+                    sender: senderNum,
+                    receiver: receiverNum,
+                    provider: txDetails?.provider || null,
+                    amount: txDetails?.amount || null,
+                    sender_name: txDetails?.sender_name || null,
+                    receiver_number: txDetails?.receiver_number || null,
+                    transfer_fee: txDetails?.transfer_fee || null,
+                    balance_after: txDetails?.balance_after || null
+                };
+                const broadcastRow = await db.get("SELECT value FROM settings WHERE key = 'broadcast_notif_enabled'");
+                const broadcastEnabled = !broadcastRow || broadcastRow.value === '1';
+                if (broadcastEnabled) {
+                    if (io) io.emit("transaction-alert", alertPayload);
+                }
+            } catch (e) {}
+        }
+
+        res.json({
+            success: true,
+            message: 'تم محاكاة استلام الرسالة بنجاح',
+            transactionType: txType1?.type || txDetails?.type || null,
+            sender: senderNum,
+            receiver: receiverNum,
+            provider: txDetails?.provider || null,
+            amount: txDetails?.amount || null,
+            sender_name: txDetails?.sender_name || null,
+            receiver_number: txDetails?.receiver_number || null,
+            transfer_fee: txDetails?.transfer_fee || null,
+            balance_after: txDetails?.balance_after || null
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
