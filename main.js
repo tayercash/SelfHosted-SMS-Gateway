@@ -1037,6 +1037,29 @@ function normalizePhoneNumber(num) {
 // كائن لتخزين المستخدمين المتصلين (ID المستخدم مقابل بياناته)
 let onlineUsers = {};
 
+// ======== حجوزات المحافظ ========
+setInterval(async () => {
+    try {
+        const expired = await db.all("SELECT * FROM wallet_reservations WHERE status = 'active' AND expires_at < datetime('now')");
+        for (const res of expired) {
+            await db.run("UPDATE wallet_reservations SET status = 'expired' WHERE id = ?", [res.id]);
+            const wallet = await db.get("SELECT merchant_id, reserved_until FROM wallets WHERE id = ?", [res.wallet_id]);
+            if (wallet && wallet.merchant_id === res.merchant_id && wallet.reserved_until) {
+                await db.run("UPDATE wallets SET merchant_id = NULL, reserved_until = NULL WHERE id = ?", [res.wallet_id]);
+                const updated = await db.get(`
+                    SELECT w.id, w.name, w.WalletNum, w.balance, w.Monthly_limit, w.daily_limit, w.walletProvider,
+                           w.note, w.merchant_id, w.reserved_until,
+                           COALESCE(m.name, '') as merchant_name,
+                           w.daily_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = w.id AND transaction_type IN ('pay', 'withdraw') AND DATE(created_at) = DATE('now')), 0) AS remaining_daily_limit,
+                           w.Monthly_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = w.id AND transaction_type IN ('pay', 'withdraw') AND strftime('%Y-%m', DATE(created_at)) = strftime('%Y-%m', 'now')), 0) AS remaining_monthly_limit
+                    FROM wallets w LEFT JOIN merchants m ON w.merchant_id = m.id WHERE w.id = ?
+                `, [res.wallet_id]);
+                if (updated && io) io.emit('wallet_updated', updated);
+            }
+        }
+    } catch (e) { console.error('Reservation expire timer error:', e.message); }
+}, 30000);
+
 let _cachedPlanLimits = null;
 let _planLimitsCacheTime = 0;
 const PLAN_LIMITS_CACHE_TTL = 60000;
@@ -1360,6 +1383,25 @@ const smsProcessingBuffer = {};
         if (!wtCols.some(c => c.name === 'source_table')) { await db.exec("ALTER TABLE wallet_transactions ADD COLUMN source_table TEXT DEFAULT NULL"); }
         if (!wtCols.some(c => c.name === 'source_tx_id')) { await db.exec("ALTER TABLE wallet_transactions ADD COLUMN source_tx_id INTEGER DEFAULT NULL"); }
     } catch (e) { console.error('Migration error (wallet_transactions):', e.message); }
+
+    // 17b. جدول حجوزات المحافظ
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS wallet_reservations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            wallet_id INTEGER NOT NULL,
+            merchant_id INTEGER NOT NULL,
+            amount REAL NOT NULL,
+            expires_at DATETIME NOT NULL,
+            status TEXT DEFAULT 'active',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON DELETE CASCADE,
+            FOREIGN KEY (merchant_id) REFERENCES merchants(id) ON DELETE CASCADE
+        )
+    `);
+    try {
+        const wCols2 = await db.all("PRAGMA table_info(wallets)");
+        if (!wCols2.some(c => c.name === 'reserved_until')) { await db.exec("ALTER TABLE wallets ADD COLUMN reserved_until DATETIME DEFAULT NULL"); }
+    } catch (e) { console.error('Migration error (wallets.reserved_until):', e.message); }
 
     // 18. جدول التعديلات (Adjustments)
     await db.exec(`
@@ -5815,6 +5857,7 @@ app.get('/get_wallets', async (req, res) => {
         let sql = `
             SELECT w.id, w.name, w.WalletNum, w.balance, w.Monthly_limit,
                    w.daily_limit, w.walletProvider, w.note, w.merchant_id,
+                   w.reserved_until,
                    COALESCE(m.name, '') as merchant_name,
                    w.daily_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = w.id AND transaction_type IN ('pay', 'withdraw') AND DATE(created_at) = DATE('now')), 0) AS remaining_daily_limit,
                    w.Monthly_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = w.id AND transaction_type IN ('pay', 'withdraw') AND strftime('%Y-%m', DATE(created_at)) = strftime('%Y-%m', 'now')), 0) AS remaining_monthly_limit
@@ -6396,6 +6439,32 @@ app.get('/get_merchant_transactions/:id', authenticateToken, async (req, res) =>
     }
 });
 
+// Delete merchant (keeps transactions)
+app.post('/delete_merchant', authenticateToken, async (req, res) => {
+    try {
+        const { merchant_id } = req.body || {};
+        if (!merchant_id) return res.status(400).json({ success: false, error: 'merchant_id required' });
+        const merchant = await db.get('SELECT id, name FROM merchants WHERE id = ?', [merchant_id]);
+        if (!merchant) return res.status(404).json({ success: false, error: 'Merchant not found' });
+
+        // Disable FK constraints temporarily to preserve merchant_transactions
+        await db.run('PRAGMA foreign_keys = OFF');
+        try {
+            await db.run('UPDATE merchant_transactions SET merchant_id = NULL WHERE merchant_id = ?', [merchant_id]);
+            await db.run('UPDATE wallets SET merchant_id = NULL WHERE merchant_id = ?', [merchant_id]);
+            await db.run('DELETE FROM merchants WHERE id = ?', [merchant_id]);
+        } finally {
+            await db.run('PRAGMA foreign_keys = ON');
+        }
+
+        io.emit('merchant_deleted', { id: merchant.id, name: merchant.name });
+        res.json({ success: true, message: 'Merchant deleted' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // ======================== Adjustment Routes ========================
 
 // List adjustments
@@ -6545,6 +6614,107 @@ app.get('/get_wallet_total_balance', async (req, res) => {
         const row = await db.get("SELECT COALESCE(SUM(balance), 0) as total FROM wallets");
         res.json({ success: true, total_balance: row.total });
     } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// ======================== Wallet Reservation API ========================
+app.post('/api/wallets/reserve', async (req, res) => {
+    try {
+        const { merchant: merchantName, price, time } = req.body || {};
+        if (!merchantName || !price || !time) {
+            return res.status(400).json({ success: false, error: 'merchant, price, and time are required' });
+        }
+        const reservationAmount = parseFloat(price);
+        const reservationMinutes = parseInt(time);
+        if (!Number.isFinite(reservationAmount) || reservationAmount <= 0) {
+            return res.status(400).json({ success: false, error: 'Invalid price' });
+        }
+        if (!Number.isFinite(reservationMinutes) || reservationMinutes <= 0) {
+            return res.status(400).json({ success: false, error: 'Invalid time' });
+        }
+
+        // Find or create merchant
+        let merchant = await db.get("SELECT * FROM merchants WHERE name = ?", [merchantName]);
+        if (!merchant) {
+            const result = await db.run("INSERT INTO merchants (name, balance, note) VALUES (?, 0, ?)", [merchantName, 'Auto-created from reservation API']);
+            merchant = await db.get("SELECT * FROM merchants WHERE id = ?", [result.lastID]);
+        }
+
+        // Find available wallet
+        const candidates = await db.all(`
+            SELECT w.*,
+                w.daily_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions
+                    WHERE card_id = w.id AND transaction_type IN ('pay', 'withdraw')
+                    AND DATE(created_at) = DATE('now')), 0) AS remaining_daily,
+                w.Monthly_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions
+                    WHERE card_id = w.id AND transaction_type IN ('pay', 'withdraw')
+                    AND strftime('%Y-%m', DATE(created_at)) = strftime('%Y-%m', 'now')), 0) AS remaining_monthly
+            FROM wallets w
+            WHERE (w.deleted = 0 OR w.deleted IS NULL)
+                AND (w.merchant_id IS NULL OR w.merchant_id = ?)
+            ORDER BY w.id ASC
+        `, [merchant.id]);
+
+        let selectedWallet = null;
+        for (const w of candidates) {
+            const rd = parseFloat(w.remaining_daily) || 0;
+            const rm = parseFloat(w.remaining_monthly) || 0;
+            if (rd < reservationAmount || rm < reservationAmount) continue;
+            const activeRes = await db.get(
+                "SELECT id FROM wallet_reservations WHERE wallet_id = ? AND status = 'active' AND expires_at > datetime('now') AND merchant_id != ? LIMIT 1",
+                [w.id, merchant.id]
+            );
+            if (activeRes) continue;
+            selectedWallet = w;
+            break;
+        }
+
+        if (!selectedWallet) {
+            return res.json({ success: false, error: 'No wallet available', reason: 'all_reserved' });
+        }
+
+        const expiresAt = new Date(Date.now() + reservationMinutes * 60000).toISOString();
+
+        // If same merchant already has a reservation on this wallet, extend it
+        const existingRes = await db.get(
+            "SELECT id FROM wallet_reservations WHERE wallet_id = ? AND merchant_id = ? AND status = 'active' AND expires_at > datetime('now') LIMIT 1",
+            [selectedWallet.id, merchant.id]
+        );
+        let reservationId;
+        if (existingRes) {
+            await db.run("UPDATE wallet_reservations SET expires_at = ?, amount = ? WHERE id = ?", [expiresAt, reservationAmount, existingRes.id]);
+            reservationId = existingRes.id;
+        } else {
+            const ins = await db.run("INSERT INTO wallet_reservations (wallet_id, merchant_id, amount, expires_at) VALUES (?, ?, ?, ?)",
+                [selectedWallet.id, merchant.id, reservationAmount, expiresAt]);
+            reservationId = ins.lastID;
+        }
+
+        // Link wallet to merchant and set reserved_until
+        await db.run("UPDATE wallets SET merchant_id = ?, reserved_until = ? WHERE id = ?",
+            [merchant.id, expiresAt, selectedWallet.id]);
+
+        // Fetch updated wallet for response and socket emit
+        const updated = await db.get(`
+            SELECT w.id, w.name, w.WalletNum, w.balance, w.Monthly_limit, w.daily_limit, w.walletProvider,
+                   w.note, w.merchant_id, w.reserved_until,
+                   COALESCE(m.name, '') as merchant_name,
+                   w.daily_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = w.id AND transaction_type IN ('pay', 'withdraw') AND DATE(created_at) = DATE('now')), 0) AS remaining_daily_limit,
+                   w.Monthly_limit - COALESCE((SELECT SUM(price) FROM wallet_transactions WHERE card_id = w.id AND transaction_type IN ('pay', 'withdraw') AND strftime('%Y-%m', DATE(created_at)) = strftime('%Y-%m', 'now')), 0) AS remaining_monthly_limit
+            FROM wallets w LEFT JOIN merchants m ON w.merchant_id = m.id WHERE w.id = ?
+        `, [selectedWallet.id]);
+        if (io) io.emit('wallet_updated', updated);
+
+        res.json({
+            success: true,
+            wallet: { id: selectedWallet.id, name: selectedWallet.name, number: selectedWallet.WalletNum },
+            merchant: { id: merchant.id, name: merchant.name },
+            reservation_id: reservationId,
+            expires_at: expiresAt
+        });
+    } catch (err) {
+        console.error('Error reserving wallet:', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });

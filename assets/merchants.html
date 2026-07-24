@@ -203,6 +203,29 @@
         </div>
     </div>
 </div>
+
+<!-- Popup حذف التاجر -->
+<div class="mou_popup mou_bottom_pop" id="merchants_delete_popup">
+    <div class="mou_popup_container mou_box_shadow">
+        <div class="mou_popup_header">
+            <span class="mou_pop_up_title" style="color: #ef4444;" data-i18n="merchants.delete_merchant">حذف التاجر</span>
+            <span class="close_popup" data-closepopup="merchants_delete_popup"></span>
+        </div>
+        <div class="mou_popup_body">
+            <div style="margin-bottom:16px;text-align:center;">
+                <i class="fas fa-trash" style="font-size:2rem;color:#ef4444;margin-bottom:8px;"></i>
+                <p style="font-size:0.95rem;color:var(--text);margin-bottom:4px;" data-i18n="merchants.delete_confirm_msg">هل تريد حذف هذا التاجر؟</p>
+                <strong id="del-merchant-name" style="color:#ffcc00;font-size:1rem;"></strong>
+                <p style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-top:8px;" data-i18n="merchants.delete_note">لن يتم حذف عمليات التاجر</p>
+            </div>
+            <input type="hidden" id="del-merchant-id">
+            <button id="confirm_delete_merchant" style="width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;font-weight:700;cursor:pointer;font-size:0.95rem;">
+                <i class="fas fa-trash"></i> <span data-i18n="merchants.confirm_delete">تأكيد الحذف</span>
+            </button>
+            <div id="del-merchant-result" style="font-size:0.85rem;margin-top:10px;text-align:center;"></div>
+        </div>
+    </div>
+</div>
 </div>
 
 <script src="/assets/js/i18n.js"></script>

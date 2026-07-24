@@ -88,9 +88,21 @@ $(document).ready(function () {
         const nameEmpty = !card.name || card.name.trim() === '';
         const incompleteBadge = nameEmpty ? '<span class="wallet-incomplete-badge" onclick="event.stopPropagation();document.querySelector(\'#card_' + card.id + ' .wallet_edit\').click();" style="display:inline-flex;align-items:center;gap:4px;margin-inline-start:6px;padding:2px 8px;border-radius:6px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;font-size:0.65rem;font-weight:600;white-space:nowrap;cursor:pointer;" title="' + (t('wallets.incomplete_info') || 'بيانات غير مكتملة - أضف اسم المحفظة') + '"><i class="fas fa-exclamation-triangle" style="font-size:0.6rem;"></i>' + (t('wallets.incomplete') || 'غير مكتمل') + '</span>' : '';
 
+        let reservationBadge = '';
+        if (card.reserved_until) {
+            const expTime = new Date(card.reserved_until).getTime();
+            const now = Date.now();
+            if (expTime > now) {
+                const secs = Math.floor((expTime - now) / 1000);
+                const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+                const ss = String(secs % 60).padStart(2, '0');
+                reservationBadge = `<span class="wallet-reservation-badge" data-expires="${card.reserved_until}" style="display:inline-flex;align-items:center;gap:4px;margin-inline-start:6px;padding:2px 8px;border-radius:6px;background:rgba(212,160,48,.2);border:1px solid rgba(212,160,48,.5);color:#d4a030;font-size:0.65rem;font-weight:600;white-space:nowrap;"><i class="fas fa-clock" style="font-size:0.6rem;"></i><span class="reservation-countdown">${mm}:${ss}</span></span>`;
+            }
+        }
+
         return `<div class="visa-card wallet-card${nameEmpty ? ' wallet-incomplete' : ''}" id="card_${card.id}">
             <div class="card-header">
-                <div class="Name">${card.name || '-'}${incompleteBadge}</div>
+                <div class="Name">${card.name || '-'}${incompleteBadge}${reservationBadge}</div>
                 <span class="chip">
                     <span class="action wallet_transaction" data-id="${card.id}"><i class="fas fa-money-bill-wave"></i></span>
                 </span>
@@ -138,6 +150,33 @@ $(document).ready(function () {
         </div>`;
     }
 
+    // ======== Reservation Countdown Timers ========
+    let reservationTimerInterval = null;
+    function startReservationTimers() {
+        if (reservationTimerInterval) clearInterval(reservationTimerInterval);
+        reservationTimerInterval = setInterval(() => {
+            const badges = document.querySelectorAll('.wallet-reservation-badge');
+            badges.forEach(badge => {
+                const expires = badge.getAttribute('data-expires');
+                if (!expires) return;
+                const expTime = new Date(expires).getTime();
+                const now = Date.now();
+                const diff = expTime - now;
+                if (diff <= 0) {
+                    badge.style.transition = 'opacity 0.5s';
+                    badge.style.opacity = '0';
+                    setTimeout(() => badge.remove(), 500);
+                    return;
+                }
+                const secs = Math.floor(diff / 1000);
+                const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+                const ss = String(secs % 60).padStart(2, '0');
+                const cdEl = badge.querySelector('.reservation-countdown');
+                if (cdEl) cdEl.textContent = mm + ':' + ss;
+            });
+        }, 1000);
+    }
+
     function fetchWallets(filter) {
         if (!filter) filter = 'all';
         $.ajax({
@@ -152,6 +191,7 @@ $(document).ready(function () {
                         container.append(createCardHtml(card));
                     });
                     updateTotalBalance();
+                    startReservationTimers();
                 }
             },
             error: function () {
@@ -168,6 +208,7 @@ $(document).ready(function () {
             $('#wallets_container').append(createCardHtml(card));
         }
         updateTotalBalance();
+        startReservationTimers();
     }
 
     function updateCardBalance(cardId, newBalance, transactionType, newDailyRemaining, newMonthlyRemaining) {
@@ -281,6 +322,8 @@ $(document).ready(function () {
         window.socket.on('merchant_updated', function () { loadMerchantsIntoSelect('#wallet_merchant_select'); });
         window.socket.off('reconnect');
         window.socket.on('reconnect', function () { fetchWallets(); });
+        window.socket.off('wallet_reservation_created');
+        window.socket.on('wallet_reservation_created', function () { fetchWallets($('#wallets_filter').val()); });
 
         $(document).off('page_shown.wallets');
         $(document).on('page_shown.wallets', function (e, url) {

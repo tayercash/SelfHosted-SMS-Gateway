@@ -97,6 +97,7 @@ $(document).ready(function () {
                     <div class="merchant_actions">\
                         <span class="action merchant_edit" data-id="' + merchant.id + '"><i class="fas fa-edit"></i></span>\
                         <span class="action merchant_adjust_balance" data-id="' + merchant.id + '"><i class="fas fa-exchange-alt"></i></span>\
+                        ' + (window.isAdmin ? '<span class="action merchant_delete" data-id="' + merchant.id + '" data-name="' + (merchant.name || '') + '" style="color:#ef4444;"><i class="fas fa-trash"></i></span>' : '') + '\
                     </div>\
                 </div>\
             </div>\
@@ -129,6 +130,46 @@ $(document).ready(function () {
                     $('#merchant_balance_input_group').hide();
                     $('#merchants_data_popup').openpopup();
                 }
+            }
+        });
+    });
+
+    // Delete merchant
+    $(document).off('click', '.merchant_delete').on('click', '.merchant_delete', function () {
+        if (!window.isAdmin) return;
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+        $('#del-merchant-id').val(id);
+        $('#del-merchant-name').text(name);
+        $('#del-merchant-result').text('');
+        $('#merchants_delete_popup').openpopup();
+    });
+
+    $(document).off('click', '#confirm_delete_merchant').on('click', '#confirm_delete_merchant', function () {
+        const id = $('#del-merchant-id').val();
+        if (!id) return;
+        $(this).prop('disabled', true).text('...');
+        $.ajax({
+            url: '/delete_merchant',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ merchant_id: parseInt(id) }),
+            success: function (res) {
+                if (res.success) {
+                    const el = document.getElementById('merchant_' + id);
+                    if (el) el.remove();
+                    calculateTotalBalance();
+                    $('#merchants_delete_popup').closepopup();
+                    showToast(t('merchants.deleted') || 'تم حذف التاجر', 'success');
+                } else {
+                    $('#del-merchant-result').text(res.error || 'Error').css('color', '#ef4444');
+                }
+                $('#confirm_delete_merchant').prop('disabled', false).html('<i class="fas fa-trash"></i> <span data-i18n="merchants.confirm_delete">تأكيد الحذف</span>');
+            },
+            error: function (xhr) {
+                const msg = xhr.responseJSON ? xhr.responseJSON.error : 'Error';
+                $('#del-merchant-result').text(msg).css('color', '#ef4444');
+                $('#confirm_delete_merchant').prop('disabled', false).html('<i class="fas fa-trash"></i> <span data-i18n="merchants.confirm_delete">تأكيد الحذف</span>');
             }
         });
     });
@@ -388,6 +429,14 @@ $(document).ready(function () {
                 setTimeout(function () { card.removeClass('updated'); }, 1000);
             } else {
                 fetchMerchants();
+            }
+        });
+        window.socket.off('merchant_deleted');
+        window.socket.on('merchant_deleted', function (data) {
+            if (data && data.id) {
+                var el = document.getElementById('merchant_' + data.id);
+                if (el) el.remove();
+                calculateTotalBalance();
             }
         });
     }
