@@ -5451,9 +5451,6 @@ async function forwardToServers(body) {
         const sentAt = new Date().toISOString();
         try {
             var fwdUrl = server.url.replace(/\/+$/, '');
-            if (!fwdUrl.endsWith('/api/incoming-payments/receive')) {
-                fwdUrl += '/api/incoming-payments/receive';
-            }
             let sendBody = body;
             const encKey = DEFAULT_WEBHOOK_KEY + (server.encryption_key || '');
             sendBody = JSON.stringify({ encrypted: true, data: xorEncrypt(body, encKey) });
@@ -5516,9 +5513,6 @@ async function autoForwardToTayercash(provider, type, extracted, receiverNumber,
         for (const server of servers) {
             try {
                 var fwdUrl = server.url.replace(/\/+$/, '');
-                if (!fwdUrl.endsWith('/api/incoming-payments/receive')) {
-                    fwdUrl += '/api/incoming-payments/receive';
-                }
                 let sendBody = body;
                 const encKey = DEFAULT_WEBHOOK_KEY + (server.encryption_key || '');
                 sendBody = JSON.stringify({ encrypted: true, data: xorEncrypt(body, encKey) });
