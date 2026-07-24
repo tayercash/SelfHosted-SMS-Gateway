@@ -4069,19 +4069,19 @@ app.post("/api/test-outgoing", async (req, res) => {
         // معالجة الدفع والتحويل لو الرسالة مطابقة (باستخدام القواعد الديناميكية)
         const txDetails = await processMessageWithRules(receiverNum, senderNum, message, now);
 
-        // إرسال تنبيه المعاملة
-        if (txType1 || txDetails) {
+        // إرسال تنبيه المعاملة فقط لو معاملة جديدة اتحفظت فعلاً
+        if (txDetails) {
             try {
                 const alertPayload = {
-                    transactionType: txType1?.type || txDetails?.type || null,
+                    transactionType: txDetails.type || null,
                     sender: senderNum,
                     receiver: receiverNum,
-                    provider: txDetails?.provider || null,
-                    amount: txDetails?.amount || null,
-                    sender_name: txDetails?.sender_name || null,
-                    receiver_number: txDetails?.receiver_number || null,
-                    transfer_fee: txDetails?.transfer_fee || null,
-                    balance_after: txDetails?.balance_after || null
+                    provider: txDetails.provider || null,
+                    amount: txDetails.amount || null,
+                    sender_name: txDetails.sender_name || null,
+                    receiver_number: txDetails.receiver_number || null,
+                    transfer_fee: txDetails.transfer_fee || null,
+                    balance_after: txDetails.balance_after || null
                 };
                 const broadcastRow = await db.get("SELECT value FROM settings WHERE key = 'broadcast_notif_enabled'");
                 const broadcastEnabled = !broadcastRow || broadcastRow.value === '1';
@@ -4093,8 +4093,9 @@ app.post("/api/test-outgoing", async (req, res) => {
 
         res.json({
             success: true,
-            message: 'تم محاكاة استلام الرسالة بنجاح',
-            transactionType: txType1?.type || txDetails?.type || null,
+            message: txDetails ? 'تم حفظ المعاملة بنجاح' : 'تم استلام الرسالة (متكررة)',
+            isNew: !!txDetails,
+            transactionType: txDetails?.type || null,
             sender: senderNum,
             receiver: receiverNum,
             provider: txDetails?.provider || null,
@@ -4762,19 +4763,19 @@ function setupConnectionHandler(socket) {
             // معالجة المدفوعات والتحويلات باستخدام القواعد الديناميكية
             const txDetails = await processMessageWithRules(simNumber, sender, content, now);
 
-            // إرسال تفاصيل المعاملة
-            if (txType3 || txDetails) {
+            // إرسال تفاصيل المعاملة فقط لو معاملة جديدة اتحفظت فعلاً
+            if (txDetails) {
                 try {
                     const alertPayload = {
-                        transactionType: txType3?.type || txDetails?.type || null,
+                        transactionType: txDetails.type || null,
                         sender: sender,
                         receiver: simNumber,
-                        provider: txDetails?.provider || null,
-                        amount: txDetails?.amount || null,
-                        sender_name: txDetails?.sender_name || null,
-                        receiver_number: txDetails?.receiver_number || null,
-                        transfer_fee: txDetails?.transfer_fee || null,
-                        balance_after: txDetails?.balance_after || null
+                        provider: txDetails.provider || null,
+                        amount: txDetails.amount || null,
+                        sender_name: txDetails.sender_name || null,
+                        receiver_number: txDetails.receiver_number || null,
+                        transfer_fee: txDetails.transfer_fee || null,
+                        balance_after: txDetails.balance_after || null
                     };
                     const broadcastRow = await db.get("SELECT value FROM settings WHERE key = 'broadcast_notif_enabled'");
                     const broadcastEnabled = !broadcastRow || broadcastRow.value === '1';
@@ -5407,12 +5408,15 @@ async function processMessageWithRules(receiverNumber, senderNumber, messageText
                 .update(`${messageText}-${receivedAt}-${rule.provider}-${rule.type}`)
                 .digest('hex');
 
+            let isNewTransaction = false;
+
             if (rule.provider === 'etisalat' && rule.type === 'incoming') {
                 const result = await db.run(
                     `INSERT OR IGNORE INTO etisalat_payments (amount, sender_number, receiver_number, sender_name, balance_after, message_text, received_at, fingerprint) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                     [extracted.amount, extracted.sender_number, receiverNumber, extracted.sender_name, extracted.balance_after, messageText, receivedAt, fingerprint]
                 );
                 if (result.changes > 0) {
+                    isNewTransaction = true;
                     const newPayment = { id: result.lastID, amount: extracted.amount, sender_number: extracted.sender_number, sender_name: extracted.sender_name, receiver_number: receiverNumber, balance_after: extracted.balance_after, message_text: messageText, received_at: receivedAt, created_at: new Date().toISOString(), forwarded: 0, confirmed: 0, forwarded_at: null };
                     if (io) io.emit("etisalat-new-payment", newPayment);
                     console.log(`[Money] e& money payment detected: ${extracted.amount} EGP from ${extracted.sender_number} (${extracted.sender_name})`);
@@ -5425,6 +5429,7 @@ async function processMessageWithRules(receiverNumber, senderNumber, messageText
                     [extracted.amount, receiverNumber, extracted.receiver_number, extracted.transfer_fee, extracted.balance_after, messageText, receivedAt, fingerprint]
                 );
                 if (result.changes > 0) {
+                    isNewTransaction = true;
                     const newTransfer = { id: result.lastID, amount: extracted.amount, sender_number: receiverNumber, receiver_number: extracted.receiver_number, transfer_fee: extracted.transfer_fee, balance_after: extracted.balance_after, message_text: messageText, received_at: receivedAt, forwarded: 0, confirmed: 0, forwarded_at: null, created_at: new Date().toISOString() };
                     if (io) io.emit("etisalat-new-outgoing", newTransfer);
                     console.log(`[Out] e& money outgoing transfer: ${extracted.amount} EGP to ${extracted.receiver_number}, fee: ${extracted.transfer_fee} EGP`);
@@ -5437,6 +5442,7 @@ async function processMessageWithRules(receiverNumber, senderNumber, messageText
                     [extracted.amount, extracted.sender_number, receiverNumber, extracted.sender_name, extracted.balance_after, messageText, receivedAt, fingerprint]
                 );
                 if (result.changes > 0) {
+                    isNewTransaction = true;
                     const newPayment = { id: result.lastID, amount: extracted.amount, sender_number: extracted.sender_number, sender_name: extracted.sender_name, receiver_number: receiverNumber, balance_after: extracted.balance_after, message_text: messageText, received_at: receivedAt, created_at: new Date().toISOString(), forwarded: 0, confirmed: 0, forwarded_at: null };
                     if (io) io.emit("vodafone-new-payment", newPayment);
                     console.log(`[Money] Vodafone Cash payment detected: ${extracted.amount} EGP from ${extracted.sender_number} (${extracted.sender_name})`);
@@ -5449,6 +5455,7 @@ async function processMessageWithRules(receiverNumber, senderNumber, messageText
                     [extracted.amount, receiverNumber, extracted.receiver_number, extracted.transfer_fee, extracted.balance_after, messageText, receivedAt, fingerprint]
                 );
                 if (result.changes > 0) {
+                    isNewTransaction = true;
                     const newTransfer = { id: result.lastID, amount: extracted.amount, sender_number: receiverNumber, receiver_number: extracted.receiver_number, transfer_fee: extracted.transfer_fee, balance_after: extracted.balance_after, message_text: messageText, received_at: receivedAt, forwarded: 0, confirmed: 0, forwarded_at: null, created_at: new Date().toISOString() };
                     if (io) io.emit("vodafone-new-outgoing", newTransfer);
                     console.log(`[Out] Vodafone Cash outgoing transfer: ${extracted.amount} EGP to ${extracted.receiver_number}, fee: ${extracted.transfer_fee} EGP`);
@@ -5457,6 +5464,7 @@ async function processMessageWithRules(receiverNumber, senderNumber, messageText
                 }
             } else {
                 // قاعدة مخصصة - حفظ في جدول النتائج العام
+                isNewTransaction = true;
                 await db.run(
                     `INSERT INTO analysis_results (rule_id, rule_name, message_text, provider, type, extracted_data, matched_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
                     [rule.id, rule.name, messageText, rule.provider, rule.type, JSON.stringify(extracted), receivedAt]
@@ -5464,6 +5472,7 @@ async function processMessageWithRules(receiverNumber, senderNumber, messageText
                 console.log(`[Chart] Custom rule matched: ${rule.name}`, extracted);
             }
 
+            if (!isNewTransaction) return null;
             return txResult;
         }
     } catch (err) {
