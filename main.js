@@ -6719,6 +6719,33 @@ app.post('/api/wallets/reserve', async (req, res) => {
     }
 });
 
+// ======================== Wallet Release API ========================
+app.post('/api/wallets/release', async (req, res) => {
+    try {
+        const { reservation_id, wallet_id } = req.body || {};
+        if (!reservation_id && !wallet_id) {
+            return res.status(400).json({ success: false, error: 'reservation_id or wallet_id is required' });
+        }
+        if (reservation_id) {
+            const reservation = await db.get("SELECT * FROM wallet_reservations WHERE id = ? AND status = 'active'", [reservation_id]);
+            if (!reservation) {
+                return res.json({ success: true, message: 'Reservation already released or not found' });
+            }
+            await db.run("UPDATE wallet_reservations SET status = 'released' WHERE id = ?", [reservation_id]);
+            await db.run("UPDATE wallets SET reserved_until = NULL WHERE id = ?", [reservation.wallet_id]);
+            console.log(`[PhoneWallet] Reservation #${reservation_id} released (wallet #${reservation.wallet_id})`);
+        } else if (wallet_id) {
+            await db.run("UPDATE wallet_reservations SET status = 'released' WHERE wallet_id = ? AND status = 'active'", [wallet_id]);
+            await db.run("UPDATE wallets SET reserved_until = NULL WHERE id = ?", [wallet_id]);
+            console.log(`[PhoneWallet] All active reservations for wallet #${wallet_id} released`);
+        }
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error releasing wallet:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // مثال لاستعلام جلب المحادثات مع حالة القراءة لمستخدم معين
 async function getConversations(userId) {
     return await db.all(`
